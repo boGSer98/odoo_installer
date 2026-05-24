@@ -16,6 +16,7 @@ Das Projekt richtet sich an Kundeninstallationen auf Remote-Servern. Die Install
 - `--dry-run` fuer sichere Vorschau der ausgefuehrten Kommandos
 - Resume-Funktion mit lokaler State-Datei (`--resume`, `--state-file`)
 - Optionaler Rollback-Modus bei Fehlschlag (`--rollback-on-fail`)
+- Remote Backup/Restore ueber `odoo-bin db dump/load`
 
 ## Voraussetzungen lokal
 
@@ -53,6 +54,24 @@ Rollback-Beispiel bei Fehlern:
 odoo-installer --config run-config.json --rollback-on-fail --yes
 ```
 
+Backup erstellen (auf dem Remote-Server):
+
+```powershell
+odoo-installer --config run-config.json --backup --backup-format zip --yes
+```
+
+Backup mit Retention (nur die letzten 7 Backups behalten):
+
+```powershell
+odoo-installer --config run-config.json --backup --backup-format dump --backup-keep-last 7 --yes
+```
+
+Restore aus einem Remote-Backup:
+
+```powershell
+odoo-installer --config run-config.json --restore /opt/odoo/backups/odoo_20260524_130000.zip --yes
+```
+
 ## Sicherheitshinweise
 
 - Das Tool erwartet fuer automatisierte Laeufe `sudo` ohne interaktive Passwortabfrage oder einen root-Login.
@@ -63,5 +82,4 @@ odoo-installer --config run-config.json --rollback-on-fail --yes
 ## Naechste Schritte
 
 - Erweiterte Nginx/Websocket-Konfiguration fuer Lastprofile
-- Backup/Restore-Subcommands
 - CI-Integrationstests gegen Ubuntu-24.04-Testsystem

@@ -128,6 +128,7 @@ def run_preflight(executor: SSHExecutor, config: InstallerConfig) -> list[str]:
 
 def build_steps(config: InstallerConfig) -> list[Step]:
     install_dir = config.install_dir.rstrip("/")
+    data_dir = (config.data_dir or f"{install_dir}/data").rstrip("/")
     src_dir = f"{install_dir}/src/odoo"
     venv_dir = f"{install_dir}/venv"
     conf_path = f"/etc/{config.service_name}.conf"
@@ -179,7 +180,8 @@ def build_steps(config: InstallerConfig) -> list[Step]:
         ),
         _sudo(
             f"mkdir -p {shlex.quote(install_dir)} {shlex.quote(log_dir)} "
-            f"{shlex.quote(install_dir)}/custom-addons {shlex.quote(install_dir)}/src",
+            f"{shlex.quote(install_dir)}/custom-addons {shlex.quote(install_dir)}/src "
+            f"{shlex.quote(data_dir)}",
             config.use_sudo,
         ),
         _sudo(
@@ -246,6 +248,7 @@ db_password = {db_password}
 db_name = {db_name}
 addons_path = {src_dir}/addons,{install_dir}/custom-addons
 logfile = {log_dir}/odoo.log
+data_dir = {data_dir}
 proxy_mode = {proxy_mode}
 xmlrpc_port = {http_port}
 longpolling_port = {longpolling_port}
@@ -257,6 +260,7 @@ longpolling_port = {longpolling_port}
         src_dir=src_dir,
         install_dir=install_dir,
         log_dir=log_dir,
+        data_dir=data_dir,
         proxy_mode="True" if config.enable_nginx else "False",
         http_port=config.http_port,
         longpolling_port=config.longpolling_port,
