@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.1.5 - 2026-05-24
+
+- SSH-Authentifizierung um Passwortmodus erweitert (interaktiv via `--ask-ssh-password`).
+- SSH Host-Key-Modus konfigurierbar gemacht (`strict`, `accept-new`, `insecure`).
+- `--save-config` speichert das SSH-Passwort bewusst nicht persistent.
+- Tests fuer SSH-Optionserzeugung und Host-Key-Validierung ergaenzt.
+
 ## 0.1.4 - 2026-05-24
 
 - Backup-Retention hinzugefuegt (`--backup-keep-last N`), um alte DB-Backups automatisch zu bereinigen.
