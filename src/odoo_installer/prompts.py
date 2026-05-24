@@ -79,6 +79,7 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
     print("\nInstallationsparameter")
     odoo_version = ask_text("Odoo-Version", "19.0")
     install_dir = ask_text("Installationspfad", "/opt/odoo")
+    data_dir = ask_text("Odoo data_dir", f"{install_dir.rstrip('/')}/data")
     odoo_system_user = ask_text("Linux-Systembenutzer fuer Odoo", "odoo")
     service_name = ask_text("Systemd-Service-Name", "odoo")
     http_port = ask_int("HTTP-Port", 8069)
@@ -115,6 +116,7 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         use_sudo=use_sudo,
         odoo_version=odoo_version,
         install_dir=install_dir,
+        data_dir=data_dir,
         odoo_system_user=odoo_system_user,
         service_name=service_name,
         db_name=db_name,

@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 0.1.3 - 2026-05-24
+
+- Remote Backup-Funktion hinzugefuegt (`--backup`) mit `zip`/`dump`-Format.
+- Remote Restore-Funktion hinzugefuegt (`--restore <REMOTE_BACKUP_PATH>`).
+- Zusatzauswahl fuer Backup/Restore eingebaut (`--backup-dir`, `--backup-name`, `--no-filestore`, `--neutralize`).
+- Installer-Konfiguration um `data_dir` erweitert und in die erzeugte Odoo-Konfiguration geschrieben.
+- Neue Unit-Tests fuer Backup/Restore-Kommandosequenzen ergaenzt.
+
 ## 0.1.2 - 2026-05-24
 
 - Optionalen Rollback-Modus bei Fehlschlag hinzugefuegt (`--rollback-on-fail`).

@@ -20,6 +20,7 @@ class InstallerConfig:
     install_dir: str = "/opt/odoo"
     odoo_system_user: str = "odoo"
     service_name: str = "odoo"
+    data_dir: str | None = None
     db_name: str = "odoo"
     db_user: str = "odoo"
     db_password: str = ""
@@ -48,6 +49,8 @@ class InstallerConfig:
             errors.append("Odoo-Systembenutzer enthaelt ungueltige Zeichen.")
         if not NAME_RE.match(self.service_name):
             errors.append("Service-Name enthaelt ungueltige Zeichen.")
+        if self.data_dir and not self.data_dir.startswith("/"):
+            errors.append("data_dir muss ein absoluter Linux-Pfad sein.")
         if not NAME_RE.match(self.db_user):
             errors.append("Datenbankbenutzer enthaelt ungueltige Zeichen.")
         if not NAME_RE.match(self.db_name):
