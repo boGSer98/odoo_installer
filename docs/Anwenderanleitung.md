@@ -49,6 +49,30 @@ odoo-installer --config run-config.json --yes
 
 Hinweis: Konfigurationsdateien koennen sensible Daten enthalten. Sicher speichern und nicht committen.
 
+## Resume nach Abbruch
+
+```bash
+odoo-installer --config run-config.json --resume --state-file .odoo-installer-state.json --yes
+```
+
+Verhalten:
+
+- Bei einer fehlgeschlagenen Installation bleibt die State-Datei erhalten.
+- Bereits erfolgreich ausgefuehrte Kommandos werden beim Resume uebersprungen.
+- Wenn die Konfiguration seit dem letzten Lauf geaendert wurde, blockiert der Resume-Lauf zum Schutz vor Inkonsistenzen.
+
+## Rollback bei Fehlschlag (best effort)
+
+```bash
+odoo-installer --config run-config.json --rollback-on-fail --yes
+```
+
+Verhalten:
+
+- Bei einem Fehler fuehrt der Installer fuer unterstuetzte Schritte Rollback-Kommandos in umgekehrter Reihenfolge aus.
+- Nach einem Rollback wird der lokale Resume-State aus Sicherheitsgruenden geloescht.
+- Rollback ist nicht vollstaendig fuer alle Schritte (z.B. Paketinstallation, UFW oder Certbot werden nicht global rueckgaengig gemacht).
+
 ## Ergebnis auf dem Zielserver
 
 - Odoo-Quellcode unter `<install_dir>/src/odoo`
