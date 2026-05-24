@@ -38,6 +38,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, welche Kommandos ausgefuehrt werden.")
     parser.add_argument("--resume", action="store_true", help="Abgebrochene Installation anhand der State-Datei fortsetzen.")
     parser.add_argument(
+        "--rollback-on-fail",
+        action="store_true",
+        help="Bei Fehlern einen best-effort Rollback fuer unterstuetzte Schritte ausfuehren.",
+    )
+    parser.add_argument(
         "--state-file",
         type=Path,
         default=Path(".odoo-installer-state.json"),
@@ -80,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
             dry_run=config.dry_run,
         )
         progress = None if config.dry_run else ProgressState(args.state_file, config, resume=args.resume)
-        run_installation(executor, config, progress=progress)
+        run_installation(executor, config, progress=progress, rollback_on_fail=args.rollback_on_fail)
         if progress:
             progress.clear()
         print("\nInstallation abgeschlossen.")

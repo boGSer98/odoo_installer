@@ -15,6 +15,7 @@ Das Projekt richtet sich an Kundeninstallationen auf Remote-Servern. Die Install
 - Erstellung von `odoo.conf`, `systemd`-Service und optional Nginx/Certbot/UFW
 - `--dry-run` fuer sichere Vorschau der ausgefuehrten Kommandos
 - Resume-Funktion mit lokaler State-Datei (`--resume`, `--state-file`)
+- Optionaler Rollback-Modus bei Fehlschlag (`--rollback-on-fail`)
 
 ## Voraussetzungen lokal
 
@@ -46,15 +47,21 @@ Resume-Beispiel mit gespeicherter Konfiguration:
 odoo-installer --config run-config.json --resume --state-file .odoo-installer-state.json --yes
 ```
 
+Rollback-Beispiel bei Fehlern:
+
+```powershell
+odoo-installer --config run-config.json --rollback-on-fail --yes
+```
+
 ## Sicherheitshinweise
 
 - Das Tool erwartet fuer automatisierte Laeufe `sudo` ohne interaktive Passwortabfrage oder einen root-Login.
 - Zugangsdaten werden nicht in Git gespeichert. Optional gespeicherte JSON-Konfigurationen sollten sicher abgelegt werden.
 - `wkhtmltopdf` wird aktuell ueber Ubuntu-Pakete installiert. Fuer produktive PDF-Layouts kann eine gezielte Versionierung erforderlich sein.
+- Rollback ist bewusst konservativ und deckt nur unterstuetzte Schritte ab (best effort, kein vollstaendiges System-Undo).
 
 ## Naechste Schritte
 
-- Rollback-Mechanismus
 - Erweiterte Nginx/Websocket-Konfiguration fuer Lastprofile
 - Backup/Restore-Subcommands
 - CI-Integrationstests gegen Ubuntu-24.04-Testsystem

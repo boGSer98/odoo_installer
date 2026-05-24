@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import shlex
 
 from .models import InstallerConfig
@@ -12,6 +12,7 @@ from .ssh import SSHExecutor
 class Step:
     name: str
     commands: list[str]
+    rollback_commands: list[str] = field(default_factory=list)
 
 
 def _sudo(command: str, use_sudo: bool) -> str:
@@ -37,6 +38,39 @@ def _write_file_command(path: str, content: str, use_sudo: bool) -> str:
 
 def _sql_literal(value: str) -> str:
     return value.replace("'", "''")
+
+
+def _print_result(stdout: str, stderr: str) -> None:
+    if stdout.strip():
+        print(stdout.rstrip())
+    if stderr.strip():
+        print(stderr.rstrip())
+
+
+def _run_rollback(executor: SSHExecutor, steps: list[Step], touched_steps: set[int]) -> list[str]:
+    if not touched_steps:
+        return []
+
+    print("\nRollback gestartet (best effort).")
+    errors: list[str] = []
+
+    for step_index in sorted(touched_steps, reverse=True):
+        step = steps[step_index]
+        if not step.rollback_commands:
+            print(f"[ROLLBACK] Kein automatischer Rollback fuer '{step.name}'.")
+            continue
+
+        print(f"[ROLLBACK] {step.name}")
+        for command in step.rollback_commands:
+            result = executor.run(command)
+            _print_result(result.stdout, result.stderr)
+            if not result.ok:
+                errors.append(
+                    f"Rollback fehlgeschlagen in Schritt '{step.name}' "
+                    f"(Exit-Code {result.returncode}): {command}"
+                )
+
+    return errors
 
 
 def run_preflight(executor: SSHExecutor, config: InstallerConfig) -> list[str]:
@@ -263,11 +297,22 @@ WantedBy=multi-user.target
         _sudo(f"systemctl --no-pager --full status {shlex.quote(config.service_name)}", config.use_sudo),
     ]
 
+    commands_service_rollback = [
+        _sudo(f"systemctl disable --now {shlex.quote(config.service_name)} || true", config.use_sudo),
+        _sudo(f"rm -f {shlex.quote(service_path)}", config.use_sudo),
+        _sudo("systemctl daemon-reload", config.use_sudo),
+        _sudo(f"rm -f {shlex.quote(conf_path)}", config.use_sudo),
+    ]
+
     steps = [
         Step(name="System vorbereiten", commands=commands_install),
         Step(name="PostgreSQL einrichten", commands=commands_postgres),
         Step(name="Odoo Quellcode und Python Umgebung", commands=commands_odoo),
-        Step(name="Odoo konfigurieren und Service starten", commands=commands_service),
+        Step(
+            name="Odoo konfigurieren und Service starten",
+            commands=commands_service,
+            rollback_commands=commands_service_rollback,
+        ),
     ]
 
     if config.enable_nginx:
@@ -305,7 +350,19 @@ server {{
             _sudo("nginx -t", config.use_sudo),
             _sudo("systemctl restart nginx", config.use_sudo),
         ]
-        steps.append(Step(name="Nginx Reverse Proxy", commands=nginx_commands))
+        nginx_rollback = [
+            _sudo(f"rm -f /etc/nginx/sites-enabled/{shlex.quote(config.service_name)}", config.use_sudo),
+            _sudo(f"rm -f {shlex.quote(nginx_conf)}", config.use_sudo),
+            _sudo("nginx -t || true", config.use_sudo),
+            _sudo("systemctl restart nginx || true", config.use_sudo),
+        ]
+        steps.append(
+            Step(
+                name="Nginx Reverse Proxy",
+                commands=nginx_commands,
+                rollback_commands=nginx_rollback,
+            )
+        )
 
     if config.enable_certbot and config.domain:
         certbot_commands = [
@@ -339,6 +396,7 @@ def run_installation(
     executor: SSHExecutor,
     config: InstallerConfig,
     progress: ProgressState | None = None,
+    rollback_on_fail: bool = False,
 ) -> None:
     warnings = run_preflight(executor, config)
     if warnings:
@@ -346,21 +404,36 @@ def run_installation(
         for warning in warnings:
             print(f"- {warning}")
 
-    for step_index, step in enumerate(build_steps(config)):
+    steps = build_steps(config)
+    touched_steps: set[int] = set()
+
+    for step_index, step in enumerate(steps):
         print(f"\n==> {step.name}")
         for command_index, command in enumerate(step.commands):
             if progress and progress.should_skip(step_index, command_index):
                 print(f"[RESUME] Uebersprungen: Schritt {step_index + 1}, Kommando {command_index + 1}")
                 continue
+
+            touched_steps.add(step_index)
             result = executor.run(command)
-            if result.stdout.strip():
-                print(result.stdout.rstrip())
-            if result.stderr.strip():
-                print(result.stderr.rstrip())
+            _print_result(result.stdout, result.stderr)
             if not result.ok:
-                raise RuntimeError(
+                message = (
                     "Fehler bei Installationsschritt "
                     f"'{step.name}'\nKommando: {command}\nExit-Code: {result.returncode}"
                 )
+
+                if rollback_on_fail:
+                    rollback_errors = _run_rollback(executor, steps, touched_steps)
+                    if progress:
+                        progress.clear()
+                    message += (
+                        "\nRollback ausgefuehrt (best effort). "
+                        "Der lokale Resume-State wurde aus Sicherheitsgruenden geloescht."
+                    )
+                    if rollback_errors:
+                        message += "\nRollback-Fehler:\n" + "\n".join(f"- {entry}" for entry in rollback_errors)
+
+                raise RuntimeError(message)
             if progress:
                 progress.mark_done(step_index, command_index)

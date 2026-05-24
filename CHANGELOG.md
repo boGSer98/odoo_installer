@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.1.2 - 2026-05-24
+
+- Optionalen Rollback-Modus bei Fehlschlag hinzugefuegt (`--rollback-on-fail`).
+- Rollback-Kommandos fuer Odoo-Service- und Nginx-Schritte eingefuehrt (best effort).
+- Resume-State wird nach aktivem Rollback aus Sicherheitsgruenden geloescht.
+- Unit-Tests fuer Rollback-Reihenfolge und Fehlerverhalten ergaenzt.
+
 ## 0.1.1 - 2026-05-24
 
 - Resume-Funktion mit lokaler State-Datei implementiert (`--resume`, `--state-file`).
