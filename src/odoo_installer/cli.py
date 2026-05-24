@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 import json
 from pathlib import Path
 import sys
 
+from .backup_restore import run_backup, run_restore
 from .models import InstallerConfig
 from .pipeline import run_installation
 from .prompts import collect_config
@@ -19,7 +21,7 @@ def _load_config(path: Path) -> InstallerConfig:
 
 
 def _save_config(path: Path, config: InstallerConfig) -> None:
-    path.write_text(json.dumps(config.__dict__, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(asdict(config), indent=2), encoding="utf-8")
 
 
 def _print_summary(config: InstallerConfig) -> None:
@@ -36,6 +38,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--config", type=Path, help="Pfad zu einer JSON-Konfigurationsdatei.")
     parser.add_argument("--save-config", type=Path, help="Optionaler Pfad zum Speichern der Konfiguration.")
     parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, welche Kommandos ausgefuehrt werden.")
+    operation_group = parser.add_mutually_exclusive_group()
+    operation_group.add_argument("--backup", action="store_true", help="Remote-Datenbankbackup erstellen.")
+    operation_group.add_argument(
+        "--restore",
+        metavar="REMOTE_BACKUP_PATH",
+        help="Remote-Backupdatei in die konfigurierte Odoo-Datenbank einspielen.",
+    )
+    parser.add_argument("--backup-dir", help="Zielverzeichnis auf dem Server fuer Backups.")
+    parser.add_argument("--backup-name", help="Dateiname fuer das Backup (optional, inkl. Endung).")
+    parser.add_argument(
+        "--backup-format",
+        choices=["zip", "dump"],
+        default="zip",
+        help="Backup-Format fuer `db dump` (Standard: zip).",
+    )
+    parser.add_argument(
+        "--no-filestore",
+        action="store_true",
+        help="Bei ZIP-Backups den Filestore nicht mit sichern.",
+    )
     parser.add_argument("--resume", action="store_true", help="Abgebrochene Installation anhand der State-Datei fortsetzen.")
     parser.add_argument(
         "--rollback-on-fail",
@@ -47,6 +69,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=Path(".odoo-installer-state.json"),
         help="Pfad zur lokalen State-Datei fuer Resume.",
+    )
+    parser.add_argument(
+        "--no-force-restore",
+        action="store_true",
+        help="Restore ohne erzwungenes Ueberschreiben ausfuehren.",
+    )
+    parser.add_argument(
+        "--neutralize",
+        action="store_true",
+        help="Bei Restore die Odoo-Neutralisierung aktivieren.",
+    )
+    parser.add_argument(
+        "--no-restart-after-restore",
+        action="store_true",
+        help="Service beim Restore nicht automatisch stoppen/starten.",
     )
     parser.add_argument("--yes", action="store_true", help="Rueckfrage zur Ausfuehrung ueberspringen.")
     return parser.parse_args(argv)
@@ -61,6 +98,8 @@ def main(argv: list[str] | None = None) -> int:
             if args.dry_run:
                 config.dry_run = True
         else:
+            if args.backup or args.restore:
+                raise ValueError("Fuer --backup/--restore ist --config erforderlich.")
             config = collect_config(default_dry_run=args.dry_run)
 
         config.validate_or_raise()
@@ -71,8 +110,14 @@ def main(argv: list[str] | None = None) -> int:
 
         _print_summary(config)
 
+        operation_label = "Installation"
+        if args.backup:
+            operation_label = "Backup"
+        elif args.restore:
+            operation_label = "Restore"
+
         if not args.yes:
-            confirm = input("\nInstallation starten? (j/n) [j]: ").strip().lower()
+            confirm = input(f"\n{operation_label} starten? (j/n) [j]: ").strip().lower()
             if confirm not in {"", "j", "ja", "y", "yes"}:
                 print("Abgebrochen.")
                 return 0
@@ -84,6 +129,30 @@ def main(argv: list[str] | None = None) -> int:
             ssh_key_path=config.ssh_key_path,
             dry_run=config.dry_run,
         )
+
+        if args.backup:
+            backup_path = run_backup(
+                executor=executor,
+                config=config,
+                backup_dir=args.backup_dir,
+                backup_name=args.backup_name,
+                dump_format=args.backup_format,
+                include_filestore=not args.no_filestore,
+            )
+            print(f"\nBackup-Pfad: {backup_path}")
+            return 0
+
+        if args.restore:
+            run_restore(
+                executor=executor,
+                config=config,
+                backup_path=args.restore,
+                force=not args.no_force_restore,
+                neutralize=args.neutralize,
+                restart_service=not args.no_restart_after_restore,
+            )
+            return 0
+
         progress = None if config.dry_run else ProgressState(args.state_file, config, resume=args.resume)
         run_installation(executor, config, progress=progress, rollback_on_fail=args.rollback_on_fail)
         if progress:

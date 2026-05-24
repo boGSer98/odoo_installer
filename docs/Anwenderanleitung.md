@@ -73,6 +73,31 @@ Verhalten:
 - Nach einem Rollback wird der lokale Resume-State aus Sicherheitsgruenden geloescht.
 - Rollback ist nicht vollstaendig fuer alle Schritte (z.B. Paketinstallation, UFW oder Certbot werden nicht global rueckgaengig gemacht).
 
+## Backup erstellen
+
+```bash
+odoo-installer --config run-config.json --backup --backup-format zip --yes
+```
+
+Optionen:
+
+- `--backup-dir`: Zielverzeichnis auf dem Remote-Server (Standard: `<install_dir>/backups`)
+- `--backup-name`: Dateiname fuer das Backup
+- `--backup-format`: `zip` (DB + Filestore) oder `dump` (nur DB-Dump)
+- `--no-filestore`: nur bei `zip`, schliesst den Filestore aus
+
+## Restore aus Backup
+
+```bash
+odoo-installer --config run-config.json --restore /opt/odoo/backups/odoo_20260524_130000.zip --yes
+```
+
+Optionen:
+
+- `--no-force-restore`: Restore ohne erzwungenes Ueberschreiben
+- `--neutralize`: Odoo-Neutralisierung beim Restore aktivieren
+- `--no-restart-after-restore`: Service nicht automatisch stoppen/starten
+
 ## Ergebnis auf dem Zielserver
 
 - Odoo-Quellcode unter `<install_dir>/src/odoo`
