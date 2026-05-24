@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict
+from getpass import getpass
 import json
 from pathlib import Path
 import sys
@@ -21,7 +22,10 @@ def _load_config(path: Path) -> InstallerConfig:
 
 
 def _save_config(path: Path, config: InstallerConfig) -> None:
-    path.write_text(json.dumps(asdict(config), indent=2), encoding="utf-8")
+    payload = asdict(config)
+    # SSH-Passwort absichtlich nicht persistent speichern.
+    payload["ssh_password"] = ""
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def _print_summary(config: InstallerConfig) -> None:
@@ -38,6 +42,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--config", type=Path, help="Pfad zu einer JSON-Konfigurationsdatei.")
     parser.add_argument("--save-config", type=Path, help="Optionaler Pfad zum Speichern der Konfiguration.")
     parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, welche Kommandos ausgefuehrt werden.")
+    parser.add_argument(
+        "--ask-ssh-password",
+        action="store_true",
+        help="SSH-Passwort interaktiv abfragen (nicht in Konfig speichern).",
+    )
+    parser.add_argument(
+        "--ssh-host-key-mode",
+        choices=["strict", "accept-new", "insecure"],
+        help="Ueberschreibt den Host-Key-Modus aus der Konfiguration.",
+    )
     operation_group = parser.add_mutually_exclusive_group()
     operation_group.add_argument("--backup", action="store_true", help="Remote-Datenbankbackup erstellen.")
     operation_group.add_argument(
@@ -107,6 +121,12 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("Fuer --backup/--restore ist --config erforderlich.")
             config = collect_config(default_dry_run=args.dry_run)
 
+        if args.ssh_host_key_mode:
+            config.ssh_host_key_mode = args.ssh_host_key_mode
+
+        if args.ask_ssh_password:
+            config.ssh_password = getpass("SSH-Passwort: ").strip()
+
         config.validate_or_raise()
 
         if args.backup_keep_last is not None:
@@ -138,39 +158,44 @@ def main(argv: list[str] | None = None) -> int:
             user=config.ssh_user,
             port=config.ssh_port,
             ssh_key_path=config.ssh_key_path,
+            ssh_password=config.ssh_password or None,
+            host_key_mode=config.ssh_host_key_mode,
             dry_run=config.dry_run,
         )
 
-        if args.backup:
-            backup_path = run_backup(
-                executor=executor,
-                config=config,
-                backup_dir=args.backup_dir,
-                backup_name=args.backup_name,
-                dump_format=args.backup_format,
-                include_filestore=not args.no_filestore,
-                keep_last=args.backup_keep_last,
-            )
-            print(f"\nBackup-Pfad: {backup_path}")
-            return 0
+        try:
+            if args.backup:
+                backup_path = run_backup(
+                    executor=executor,
+                    config=config,
+                    backup_dir=args.backup_dir,
+                    backup_name=args.backup_name,
+                    dump_format=args.backup_format,
+                    include_filestore=not args.no_filestore,
+                    keep_last=args.backup_keep_last,
+                )
+                print(f"\nBackup-Pfad: {backup_path}")
+                return 0
 
-        if args.restore:
-            run_restore(
-                executor=executor,
-                config=config,
-                backup_path=args.restore,
-                force=not args.no_force_restore,
-                neutralize=args.neutralize,
-                restart_service=not args.no_restart_after_restore,
-            )
-            return 0
+            if args.restore:
+                run_restore(
+                    executor=executor,
+                    config=config,
+                    backup_path=args.restore,
+                    force=not args.no_force_restore,
+                    neutralize=args.neutralize,
+                    restart_service=not args.no_restart_after_restore,
+                )
+                return 0
 
-        progress = None if config.dry_run else ProgressState(args.state_file, config, resume=args.resume)
-        run_installation(executor, config, progress=progress, rollback_on_fail=args.rollback_on_fail)
-        if progress:
-            progress.clear()
-        print("\nInstallation abgeschlossen.")
-        return 0
+            progress = None if config.dry_run else ProgressState(args.state_file, config, resume=args.resume)
+            run_installation(executor, config, progress=progress, rollback_on_fail=args.rollback_on_fail)
+            if progress:
+                progress.clear()
+            print("\nInstallation abgeschlossen.")
+            return 0
+        finally:
+            executor.close()
     except KeyboardInterrupt:
         print("\nAbbruch durch Benutzer.")
         return 130
