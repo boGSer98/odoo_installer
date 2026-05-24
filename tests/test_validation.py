@@ -34,9 +34,17 @@ class ValidationTests(unittest.TestCase):
 
     def test_safe_dict_masks_passwords(self) -> None:
         config = _base_config()
+        config.ssh_password = "linux-login-secret"
         safe = config.safe_dict()
+        self.assertEqual(safe["ssh_password"], "***")
         self.assertEqual(safe["db_password"], "***")
         self.assertEqual(safe["admin_password"], "***")
+
+    def test_invalid_host_key_mode_is_rejected(self) -> None:
+        config = _base_config()
+        config.ssh_host_key_mode = "unknown"
+        errors = config.validate()
+        self.assertIn("ssh_host_key_mode muss 'strict', 'accept-new' oder 'insecure' sein.", errors)
 
 
 if __name__ == "__main__":

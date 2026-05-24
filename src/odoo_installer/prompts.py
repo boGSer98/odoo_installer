@@ -62,6 +62,15 @@ def ask_secret(label: str, allow_empty: bool = False) -> str:
         print("Eingabe ist erforderlich.")
 
 
+def ask_choice(label: str, choices: list[str], default: str) -> str:
+    value_set = {entry.lower() for entry in choices}
+    while True:
+        value = ask_text(label, default, required=True).strip().lower()
+        if value in value_set:
+            return value
+        print(f"Ungueltige Eingabe. Erlaubt: {', '.join(choices)}")
+
+
 def generate_secret() -> str:
     return secrets.token_urlsafe(24)
 
@@ -74,6 +83,12 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
     ssh_user = ask_text("SSH-Benutzer", "root")
     ssh_port = ask_int("SSH-Port", 22)
     ssh_key_path = _normalize_empty(ask_text("Pfad zur SSH-Key-Datei (optional)", "", required=False))
+    ssh_password = ask_secret("SSH-Passwort (optional, leer = Key/Agent)", allow_empty=True)
+    ssh_host_key_mode = ask_choice(
+        "SSH Host-Key-Modus (strict/accept-new/insecure)",
+        choices=["strict", "accept-new", "insecure"],
+        default="accept-new",
+    )
     use_sudo = ask_bool("Soll sudo verwendet werden?", True)
 
     print("\nInstallationsparameter")
@@ -113,6 +128,8 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         ssh_user=ssh_user,
         ssh_port=ssh_port,
         ssh_key_path=ssh_key_path,
+        ssh_password=ssh_password,
+        ssh_host_key_mode=ssh_host_key_mode,
         use_sudo=use_sudo,
         odoo_version=odoo_version,
         install_dir=install_dir,

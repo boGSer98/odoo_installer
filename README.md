@@ -17,6 +17,7 @@ Das Projekt richtet sich an Kundeninstallationen auf Remote-Servern. Die Install
 - Resume-Funktion mit lokaler State-Datei (`--resume`, `--state-file`)
 - Optionaler Rollback-Modus bei Fehlschlag (`--rollback-on-fail`)
 - Remote Backup/Restore ueber `odoo-bin db dump/load`
+- SSH-Login via Key/Agent **oder** Linux-Passwort (`--ask-ssh-password`)
 
 ## Voraussetzungen lokal
 
@@ -53,6 +54,20 @@ Rollback-Beispiel bei Fehlern:
 ```powershell
 odoo-installer --config run-config.json --rollback-on-fail --yes
 ```
+
+SSH-Passwort interaktiv eingeben:
+
+```powershell
+odoo-installer --config run-config.json --ask-ssh-password --yes
+```
+
+Falls `Host key verification failed` auftritt:
+
+```powershell
+odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode accept-new --yes
+```
+
+Hinweis: `--ssh-host-key-mode insecure` deaktiviert die Host-Key-Pruefung (nur fuer Testumgebungen).
 
 Backup erstellen (auf dem Remote-Server):
 

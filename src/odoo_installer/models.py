@@ -7,6 +7,7 @@ import re
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 VERSION_RE = re.compile(r"^\d+\.\d+$")
 DOMAIN_RE = re.compile(r"^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}$")
+HOST_KEY_MODES = {"strict", "accept-new", "insecure"}
 
 
 @dataclass(slots=True)
@@ -15,6 +16,8 @@ class InstallerConfig:
     ssh_user: str
     ssh_port: int = 22
     ssh_key_path: str | None = None
+    ssh_password: str = ""
+    ssh_host_key_mode: str = "accept-new"
     use_sudo: bool = True
     odoo_version: str = "19.0"
     install_dir: str = "/opt/odoo"
@@ -41,6 +44,8 @@ class InstallerConfig:
             errors.append("SSH-Benutzer darf nicht leer sein.")
         if not (1 <= self.ssh_port <= 65535):
             errors.append("SSH-Port muss zwischen 1 und 65535 liegen.")
+        if self.ssh_host_key_mode not in HOST_KEY_MODES:
+            errors.append("ssh_host_key_mode muss 'strict', 'accept-new' oder 'insecure' sein.")
         if not VERSION_RE.match(self.odoo_version):
             errors.append("Odoo-Version muss dem Format X.Y entsprechen (z.B. 19.0).")
         if not self.install_dir.startswith("/"):
@@ -81,7 +86,7 @@ class InstallerConfig:
 
     def safe_dict(self) -> dict[str, object]:
         data = asdict(self)
-        for key in ("db_password", "admin_password"):
+        for key in ("ssh_password", "db_password", "admin_password"):
             if data.get(key):
                 data[key] = "***"
         return data

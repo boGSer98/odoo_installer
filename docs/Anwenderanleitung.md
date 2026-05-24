@@ -27,10 +27,37 @@ odoo-installer
 Das Tool fragt folgende Bereiche gefuehrt ab:
 
 - SSH-Verbindung (Host, Benutzer, Port, Key)
+- SSH-Passwort (optional, falls kein Key/Agent genutzt wird)
 - Odoo-Parameter (Version, Pfade, Service)
 - PostgreSQL-Parameter (DB, Benutzer, Passwort)
 - Weboptionen (Domain, Nginx, Certbot)
 - Sicherheitsoptionen (UFW)
+
+## SSH-Authentifizierung
+
+Key/Agent (Standard):
+
+```bash
+odoo-installer --config run-config.json --yes
+```
+
+Linux-Passwort interaktiv abfragen:
+
+```bash
+odoo-installer --config run-config.json --ask-ssh-password --yes
+```
+
+Host-Key-Modi:
+
+- `strict`: nur bereits bekannte Host Keys akzeptieren
+- `accept-new`: neue Host Keys automatisch akzeptieren (empfohlen)
+- `insecure`: Host-Key-Pruefung deaktivieren (nur Test/Lab)
+
+Beispiel bei `Host key verification failed`:
+
+```bash
+odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode accept-new --yes
+```
 
 ## Dry-Run
 
