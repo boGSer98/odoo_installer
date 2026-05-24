@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import shlex
 
 from .models import InstallerConfig
+from .state import ProgressState
 from .ssh import SSHExecutor
 
 
@@ -334,16 +335,23 @@ server {{
     return steps
 
 
-def run_installation(executor: SSHExecutor, config: InstallerConfig) -> None:
+def run_installation(
+    executor: SSHExecutor,
+    config: InstallerConfig,
+    progress: ProgressState | None = None,
+) -> None:
     warnings = run_preflight(executor, config)
     if warnings:
         print("Preflight-Warnungen:")
         for warning in warnings:
             print(f"- {warning}")
 
-    for step in build_steps(config):
+    for step_index, step in enumerate(build_steps(config)):
         print(f"\n==> {step.name}")
-        for command in step.commands:
+        for command_index, command in enumerate(step.commands):
+            if progress and progress.should_skip(step_index, command_index):
+                print(f"[RESUME] Uebersprungen: Schritt {step_index + 1}, Kommando {command_index + 1}")
+                continue
             result = executor.run(command)
             if result.stdout.strip():
                 print(result.stdout.rstrip())
@@ -354,3 +362,5 @@ def run_installation(executor: SSHExecutor, config: InstallerConfig) -> None:
                     "Fehler bei Installationsschritt "
                     f"'{step.name}'\nKommando: {command}\nExit-Code: {result.returncode}"
                 )
+            if progress:
+                progress.mark_done(step_index, command_index)

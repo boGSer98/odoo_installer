@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# odoo_installer runtime files
+run-config.json
+.odoo-installer-state.json

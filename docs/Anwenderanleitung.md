@@ -49,6 +49,18 @@ odoo-installer --config run-config.json --yes
 
 Hinweis: Konfigurationsdateien koennen sensible Daten enthalten. Sicher speichern und nicht committen.
 
+## Resume nach Abbruch
+
+```bash
+odoo-installer --config run-config.json --resume --state-file .odoo-installer-state.json --yes
+```
+
+Verhalten:
+
+- Bei einer fehlgeschlagenen Installation bleibt die State-Datei erhalten.
+- Bereits erfolgreich ausgefuehrte Kommandos werden beim Resume uebersprungen.
+- Wenn die Konfiguration seit dem letzten Lauf geaendert wurde, blockiert der Resume-Lauf zum Schutz vor Inkonsistenzen.
+
 ## Ergebnis auf dem Zielserver
 
 - Odoo-Quellcode unter `<install_dir>/src/odoo`

@@ -8,6 +8,7 @@ import sys
 from .models import InstallerConfig
 from .pipeline import run_installation
 from .prompts import collect_config
+from .state import ProgressState
 from .ssh import SSHExecutor
 
 
@@ -35,6 +36,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--config", type=Path, help="Pfad zu einer JSON-Konfigurationsdatei.")
     parser.add_argument("--save-config", type=Path, help="Optionaler Pfad zum Speichern der Konfiguration.")
     parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, welche Kommandos ausgefuehrt werden.")
+    parser.add_argument("--resume", action="store_true", help="Abgebrochene Installation anhand der State-Datei fortsetzen.")
+    parser.add_argument(
+        "--state-file",
+        type=Path,
+        default=Path(".odoo-installer-state.json"),
+        help="Pfad zur lokalen State-Datei fuer Resume.",
+    )
     parser.add_argument("--yes", action="store_true", help="Rueckfrage zur Ausfuehrung ueberspringen.")
     return parser.parse_args(argv)
 
@@ -71,7 +79,10 @@ def main(argv: list[str] | None = None) -> int:
             ssh_key_path=config.ssh_key_path,
             dry_run=config.dry_run,
         )
-        run_installation(executor, config)
+        progress = None if config.dry_run else ProgressState(args.state_file, config, resume=args.resume)
+        run_installation(executor, config, progress=progress)
+        if progress:
+            progress.clear()
         print("\nInstallation abgeschlossen.")
         return 0
     except KeyboardInterrupt:

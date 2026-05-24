@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.1.1 - 2026-05-24
+
+- Resume-Funktion mit lokaler State-Datei implementiert (`--resume`, `--state-file`).
+- Schutz gegen Resume mit geaenderter Konfiguration per Konfigurations-Hash hinzugefuegt.
+- Pipeline erweitert, um bereits erfolgreich ausgefuehrte Kommandos gezielt zu ueberspringen.
+- Anwenderdokumentation fuer Resume-Lauf aktualisiert.
+
 ## 0.1.0 - 2026-05-24
 
 - Initiales Projektgeruest fuer `odoo_installer` erstellt.

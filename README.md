@@ -14,6 +14,7 @@ Das Projekt richtet sich an Kundeninstallationen auf Remote-Servern. Die Install
 - Idempotente Grundinstallation von Odoo aus dem offiziellen Git-Repository
 - Erstellung von `odoo.conf`, `systemd`-Service und optional Nginx/Certbot/UFW
 - `--dry-run` fuer sichere Vorschau der ausgefuehrten Kommandos
+- Resume-Funktion mit lokaler State-Datei (`--resume`, `--state-file`)
 
 ## Voraussetzungen lokal
 
@@ -39,6 +40,12 @@ pip install -e .
 odoo-installer
 ```
 
+Resume-Beispiel mit gespeicherter Konfiguration:
+
+```powershell
+odoo-installer --config run-config.json --resume --state-file .odoo-installer-state.json --yes
+```
+
 ## Sicherheitshinweise
 
 - Das Tool erwartet fuer automatisierte Laeufe `sudo` ohne interaktive Passwortabfrage oder einen root-Login.
@@ -47,7 +54,7 @@ odoo-installer
 
 ## Naechste Schritte
 
-- Resume- und Rollback-Mechanismus
+- Rollback-Mechanismus
 - Erweiterte Nginx/Websocket-Konfiguration fuer Lastprofile
 - Backup/Restore-Subcommands
 - CI-Integrationstests gegen Ubuntu-24.04-Testsystem
