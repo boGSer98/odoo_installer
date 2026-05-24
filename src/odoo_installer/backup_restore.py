@@ -53,6 +53,32 @@ def _timestamp() -> str:
     return datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
 
+def _run_retention(
+    executor: SSHExecutor,
+    config: InstallerConfig,
+    backup_root: str,
+    dump_ext: str,
+    keep_last: int,
+) -> None:
+    if keep_last <= 0:
+        raise ValueError("keep_last muss groesser als 0 sein.")
+
+    pattern = f"{config.db_name}_*.{dump_ext}"
+    command = (
+        f"find {shlex.quote(backup_root)} -maxdepth 1 -type f -name {shlex.quote(pattern)} "
+        "-printf '%T@ %p\\0' | "
+        "sort -z -nr | "
+        f"awk -v RS='\\0' -v ORS='\\0' -v keep={keep_last} "
+        "'NR > keep { sub(/^[^ ]+ /, \"\", $0); print }' | "
+        "xargs -0 -r rm -f"
+    )
+    _run_or_fail(
+        executor,
+        _sudo(command, config.use_sudo),
+        "Backup-Retention",
+    )
+
+
 def run_backup(
     executor: SSHExecutor,
     config: InstallerConfig,
@@ -60,6 +86,7 @@ def run_backup(
     backup_name: str | None = None,
     dump_format: str = "zip",
     include_filestore: bool = True,
+    keep_last: int | None = None,
 ) -> str:
     if dump_format not in {"zip", "dump"}:
         raise ValueError("dump_format muss 'zip' oder 'dump' sein.")
@@ -98,6 +125,17 @@ def run_backup(
         _as_user(command, config.odoo_system_user, config.use_sudo),
         "Datenbank-Backup",
     )
+
+    if keep_last is not None:
+        print(f"Backup-Retention aktiv: neueste {keep_last} Dateien bleiben erhalten.")
+        _run_retention(
+            executor=executor,
+            config=config,
+            backup_root=backup_root,
+            dump_ext=ext,
+            keep_last=keep_last,
+        )
+
     print("Backup erfolgreich erstellt.")
     return backup_path
 

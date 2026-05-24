@@ -83,8 +83,15 @@ Optionen:
 
 - `--backup-dir`: Zielverzeichnis auf dem Remote-Server (Standard: `<install_dir>/backups`)
 - `--backup-name`: Dateiname fuer das Backup
+- `--backup-keep-last N`: nach erfolgreichem Backup nur die letzten `N` DB-Backups behalten
 - `--backup-format`: `zip` (DB + Filestore) oder `dump` (nur DB-Dump)
 - `--no-filestore`: nur bei `zip`, schliesst den Filestore aus
+
+Beispiel mit Retention:
+
+```bash
+odoo-installer --config run-config.json --backup --backup-format dump --backup-keep-last 7 --yes
+```
 
 ## Restore aus Backup
 

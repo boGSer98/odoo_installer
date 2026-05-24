@@ -60,6 +60,12 @@ Backup erstellen (auf dem Remote-Server):
 odoo-installer --config run-config.json --backup --backup-format zip --yes
 ```
 
+Backup mit Retention (nur die letzten 7 Backups behalten):
+
+```powershell
+odoo-installer --config run-config.json --backup --backup-format dump --backup-keep-last 7 --yes
+```
+
 Restore aus einem Remote-Backup:
 
 ```powershell

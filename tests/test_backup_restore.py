@@ -50,6 +50,23 @@ class BackupRestoreTests(unittest.TestCase):
         self.assertIn("--format=zip", joined)
         self.assertIn("--no-filestore", joined)
 
+    def test_backup_with_retention_executes_cleanup_command(self) -> None:
+        executor = _FakeExecutor()
+        run_backup(
+            executor=executor,
+            config=_config(),
+            backup_dir="/opt/odoo/backups",
+            backup_name="nightly.dump",
+            dump_format="dump",
+            include_filestore=True,
+            keep_last=5,
+        )
+
+        joined = "\n".join(executor.commands)
+        self.assertIn("db dump odoo /opt/odoo/backups/nightly.dump", joined)
+        self.assertIn("find /opt/odoo/backups -maxdepth 1 -type f -name 'odoo_*.dump'", joined)
+        self.assertIn("awk -v RS='\\0' -v ORS='\\0' -v keep=5", joined)
+
     def test_restore_with_restart_force_and_neutralize(self) -> None:
         executor = _FakeExecutor()
         run_restore(

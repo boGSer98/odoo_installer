@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.1.4 - 2026-05-24
+
+- Backup-Retention hinzugefuegt (`--backup-keep-last N`), um alte DB-Backups automatisch zu bereinigen.
+- Validierung fuer Retention-Optionen in der CLI ergaenzt.
+- Unit-Test fuer Retention-Kommandoerzeugung hinzugefuegt.
+
 ## 0.1.3 - 2026-05-24
 
 - Remote Backup-Funktion hinzugefuegt (`--backup`) mit `zip`/`dump`-Format.

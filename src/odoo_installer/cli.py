@@ -48,6 +48,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--backup-dir", help="Zielverzeichnis auf dem Server fuer Backups.")
     parser.add_argument("--backup-name", help="Dateiname fuer das Backup (optional, inkl. Endung).")
     parser.add_argument(
+        "--backup-keep-last",
+        type=int,
+        help="Loescht nach erfolgreichem Backup aeltere DB-Backups und behaelt nur die letzten N (namensbasiert).",
+    )
+    parser.add_argument(
         "--backup-format",
         choices=["zip", "dump"],
         default="zip",
@@ -104,6 +109,12 @@ def main(argv: list[str] | None = None) -> int:
 
         config.validate_or_raise()
 
+        if args.backup_keep_last is not None:
+            if not args.backup:
+                raise ValueError("--backup-keep-last kann nur zusammen mit --backup verwendet werden.")
+            if args.backup_keep_last <= 0:
+                raise ValueError("--backup-keep-last muss groesser als 0 sein.")
+
         if args.save_config:
             _save_config(args.save_config, config)
             print(f"Konfiguration gespeichert: {args.save_config}")
@@ -138,6 +149,7 @@ def main(argv: list[str] | None = None) -> int:
                 backup_name=args.backup_name,
                 dump_format=args.backup_format,
                 include_filestore=not args.no_filestore,
+                keep_last=args.backup_keep_last,
             )
             print(f"\nBackup-Pfad: {backup_path}")
             return 0
