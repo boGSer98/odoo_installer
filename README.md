@@ -6,6 +6,8 @@ Gefuehrter Installer fuer Odoo 19 auf entfernten Ubuntu-24.04-Servern via SSH.
 
 Das Projekt richtet sich an Kundeninstallationen auf Remote-Servern. Die Installation wird ueber gefuehrte Abfragen gesteuert und kann als `dry-run` getestet werden.
 
+Linux-Setup Schritt fuer Schritt: `docs/Installationsanleitung_Linux.md`
+
 ## Aktueller Funktionsumfang
 
 - Interaktive Konfigurationsabfragen fuer SSH, Odoo, PostgreSQL, Nginx, TLS und Firewall
@@ -18,6 +20,7 @@ Das Projekt richtet sich an Kundeninstallationen auf Remote-Servern. Die Install
 - Optionaler Rollback-Modus bei Fehlschlag (`--rollback-on-fail`)
 - Remote Backup/Restore ueber `odoo-bin db dump/load`
 - SSH-Login via Key/Agent **oder** Linux-Passwort (`--ask-ssh-password`)
+- Statusleiste im Terminal mit aktuellem Installationsfortschritt
 
 ## Voraussetzungen lokal
 
