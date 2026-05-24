@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import shlex
+import sys
 
 from .models import InstallerConfig
 from .state import ProgressState
@@ -13,6 +14,50 @@ class Step:
     name: str
     commands: list[str]
     rollback_commands: list[str] = field(default_factory=list)
+
+
+class InstallStatusBar:
+    def __init__(self, total: int, width: int = 30) -> None:
+        self.total = max(total, 1)
+        self.width = width
+        self.interactive = sys.stdout.isatty()
+        self._last_len = 0
+        self._active = False
+
+    def _line(self, completed: int, step_name: str, note: str = "") -> str:
+        ratio = min(max(completed / self.total, 0.0), 1.0)
+        filled = int(round(ratio * self.width))
+        bar = "#" * filled + "-" * (self.width - filled)
+        percent = int(round(ratio * 100))
+        suffix = f" | {step_name}"
+        if note:
+            suffix += f" ({note})"
+        return f"[{bar}] {percent:3d}% ({completed}/{self.total}){suffix}"
+
+    def render(self, completed: int, step_name: str, note: str = "") -> None:
+        line = self._line(completed, step_name, note=note)
+        if self.interactive:
+            padded = line.ljust(self._last_len)
+            sys.stdout.write("\r" + padded)
+            sys.stdout.flush()
+            self._last_len = max(self._last_len, len(line))
+            self._active = True
+            return
+        print(line)
+
+    def pause(self) -> None:
+        if self.interactive and self._active:
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            self._active = False
+            self._last_len = 0
+
+    def finish(self) -> None:
+        if self.interactive and self._active:
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            self._active = False
+            self._last_len = 0
 
 
 def _sudo(command: str, use_sudo: bool) -> str:
@@ -409,17 +454,27 @@ def run_installation(
             print(f"- {warning}")
 
     steps = build_steps(config)
+    total_commands = sum(len(step.commands) for step in steps)
+    status_bar = InstallStatusBar(total=total_commands)
+    completed_commands = 0
     touched_steps: set[int] = set()
 
+    status_bar.render(completed_commands, "Start")
+
     for step_index, step in enumerate(steps):
+        status_bar.pause()
         print(f"\n==> {step.name}")
+        status_bar.render(completed_commands, step.name)
         for command_index, command in enumerate(step.commands):
             if progress and progress.should_skip(step_index, command_index):
+                completed_commands += 1
                 print(f"[RESUME] Uebersprungen: Schritt {step_index + 1}, Kommando {command_index + 1}")
+                status_bar.render(completed_commands, step.name, note="resume")
                 continue
 
             touched_steps.add(step_index)
             result = executor.run(command)
+            status_bar.pause()
             _print_result(result.stdout, result.stderr)
             if not result.ok:
                 message = (
@@ -438,6 +493,12 @@ def run_installation(
                     if rollback_errors:
                         message += "\nRollback-Fehler:\n" + "\n".join(f"- {entry}" for entry in rollback_errors)
 
+                status_bar.finish()
                 raise RuntimeError(message)
+
+            completed_commands += 1
+            status_bar.render(completed_commands, step.name)
             if progress:
                 progress.mark_done(step_index, command_index)
+
+    status_bar.finish()

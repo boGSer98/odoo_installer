@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.1.6 - 2026-05-24
+
+- Terminal-Statusleiste fuer den Installationsfortschritt hinzugefuegt (Prozent + `x/y` Kommandos).
+- Linux-Installationsanleitung als separates Dokument hinzugefuegt (`docs/Installationsanleitung_Linux.md`).
+
 ## 0.1.5 - 2026-05-24
 
 - SSH-Authentifizierung um Passwortmodus erweitert (interaktiv via `--ask-ssh-password`).

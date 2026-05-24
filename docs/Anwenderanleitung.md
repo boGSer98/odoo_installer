@@ -24,6 +24,8 @@ pip install -e .
 odoo-installer
 ```
 
+Waehrend der Installation zeigt das Tool eine Statusleiste mit Fortschritt in Prozent sowie Anzahl erledigter Kommandos an.
+
 Das Tool fragt folgende Bereiche gefuehrt ab:
 
 - SSH-Verbindung (Host, Benutzer, Port, Key)
