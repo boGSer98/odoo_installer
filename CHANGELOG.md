@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 0.1.8 - 2026-05-28
+
+- Fehlerfall behoben, bei dem ein initial leeres PostgreSQL-DB-Schema zu HTTP 500 beim ersten Aufruf fuehren konnte.
+- Installationspipeline um automatisierte Datenbank-Initialisierung (`base`) erweitert:
+  - neue DB: `odoo-bin db init`
+  - bestehende, aber leere DB: `-i base --stop-after-init`
+- CLI-Konfig-Handling verbessert: `dry_run` bleibt nicht mehr unbeabsichtigt in produktiven Folge-Laeufen aktiv.
+- Linux-Anleitung um Troubleshooting fuer `command not found`, `--upgrade`-Syntax und HTTP-500-Diagnose erweitert.
+
 ## 0.1.7 - 2026-05-24
 
 - SSH-basierte Ausfuehrung entfernt; Installer laeuft jetzt ausschliesslich lokal auf dem Linux-Zielserver.

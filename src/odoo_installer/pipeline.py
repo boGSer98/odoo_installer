@@ -176,6 +176,7 @@ def build_steps(config: InstallerConfig) -> list[Step]:
     data_dir = (config.data_dir or f"{install_dir}/data").rstrip("/")
     src_dir = f"{install_dir}/src/odoo"
     venv_dir = f"{install_dir}/venv"
+    odoo_bin = f"{shlex.quote(venv_dir)}/bin/python3 {shlex.quote(src_dir)}/odoo-bin"
     conf_path = f"/etc/{config.service_name}.conf"
     service_path = f"/etc/systemd/system/{config.service_name}.service"
     log_dir = f"{install_dir}/logs"
@@ -245,12 +246,6 @@ def build_steps(config: InstallerConfig) -> list[Step]:
         ),
         _as_user(
             f"psql -c \"ALTER USER {config.db_user} WITH PASSWORD '{db_password_sql}'\"",
-            "postgres",
-            config.use_sudo,
-        ),
-        _as_user(
-            f"psql -tc \"SELECT 1 FROM pg_database WHERE datname='{db_name_sql}'\" | grep -q 1 || "
-            f"createdb -O {db_user} {db_name}",
             "postgres",
             config.use_sudo,
         ),
@@ -337,6 +332,21 @@ WantedBy=multi-user.target
         _write_file_command(conf_path, config_file.rstrip(), config.use_sudo),
         _sudo(
             f"chown {shlex.quote(config.odoo_system_user)}:{shlex.quote(config.odoo_system_user)} {shlex.quote(conf_path)}",
+            config.use_sudo,
+        ),
+        _as_user(
+            "if psql -d postgres -tAc "
+            f"\"SELECT 1 FROM pg_database WHERE datname='{db_name_sql}'\" | grep -q 1; then "
+            f"if ! psql -d {db_name} -tAc "
+            "\"SELECT to_regclass('public.ir_module_module')\" 2>/dev/null | grep -q 'ir_module_module'; then "
+            f"{odoo_bin} -c {shlex.quote(conf_path)} -d {db_name} -i base --stop-after-init; "
+            "fi; "
+            "else "
+            f"{odoo_bin} db init {db_name} --config={shlex.quote(conf_path)} "
+            "--username=admin "
+            f"--password={shlex.quote(config.admin_password)}; "
+            "fi",
+            config.odoo_system_user,
             config.use_sudo,
         ),
         _write_file_command(service_path, service_file.rstrip(), config.use_sudo),

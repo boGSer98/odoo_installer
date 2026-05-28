@@ -111,3 +111,20 @@ python3 -m pip install -e .
 
 - In der Konfiguration andere Ports waehlen (`http_port`, `longpolling_port`)
 - Oder den belegenden Dienst beenden/umkonfigurieren
+
+`HTTP 500 bei http://<server-ip>:8069`
+
+- Odoo-Log und Service-Log pruefen:
+
+```bash
+sudo systemctl --no-pager --full status odoo
+sudo journalctl -u odoo -n 200 --no-pager
+sudo tail -n 200 /opt/odoo/logs/odoo.log
+```
+
+- Falls die Datenbank noch nicht initialisiert ist, einmalig ausfuehren:
+
+```bash
+sudo -u odoo /opt/odoo/venv/bin/python3 /opt/odoo/src/odoo/odoo-bin -c /etc/odoo.conf -d odoo -i base --stop-after-init
+sudo systemctl restart odoo
+```
