@@ -6,7 +6,7 @@ import sys
 
 from .models import InstallerConfig
 from .state import ProgressState
-from .ssh import SSHExecutor
+from .ssh import LocalExecutor
 
 
 @dataclass(slots=True)
@@ -92,7 +92,7 @@ def _print_result(stdout: str, stderr: str) -> None:
         print(stderr.rstrip())
 
 
-def _run_rollback(executor: SSHExecutor, steps: list[Step], touched_steps: set[int]) -> list[str]:
+def _run_rollback(executor: LocalExecutor, steps: list[Step], touched_steps: set[int]) -> list[str]:
     if not touched_steps:
         return []
 
@@ -118,12 +118,12 @@ def _run_rollback(executor: SSHExecutor, steps: list[Step], touched_steps: set[i
     return errors
 
 
-def run_preflight(executor: SSHExecutor, config: InstallerConfig) -> list[str]:
+def run_preflight(executor: LocalExecutor, config: InstallerConfig) -> list[str]:
     warnings: list[str] = []
 
     connectivity = executor.run("echo connected")
     if not connectivity.ok or "connected" not in connectivity.stdout:
-        raise RuntimeError(f"SSH-Verbindung fehlgeschlagen:\n{connectivity.stderr.strip()}")
+        raise RuntimeError(f"Lokale Shell-Pruefung fehlgeschlagen:\n{connectivity.stderr.strip()}")
 
     os_check = executor.run("source /etc/os-release && printf '%s:%s' \"$ID\" \"$VERSION_ID\"")
     if not os_check.ok:
@@ -140,7 +140,7 @@ def run_preflight(executor: SSHExecutor, config: InstallerConfig) -> list[str]:
         if not sudo_check.ok:
             raise RuntimeError(
                 "Sudo ohne interaktive Passworteingabe ist nicht verfuegbar. "
-                "Bitte passwortloses sudo konfigurieren oder als root verbinden."
+                "Bitte passwortloses sudo konfigurieren oder als root ausfuehren."
             )
 
     mem_check = executor.run("free -m | awk '/Mem:/ {print $2}'")
@@ -442,7 +442,7 @@ server {{
 
 
 def run_installation(
-    executor: SSHExecutor,
+    executor: LocalExecutor,
     config: InstallerConfig,
     progress: ProgressState | None = None,
     rollback_on_fail: bool = False,

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
-from getpass import getpass
+from dataclasses import asdict, fields
 import json
 from pathlib import Path
+import platform
 import sys
 
 from .backup_restore import run_backup, run_restore
@@ -12,20 +12,19 @@ from .models import InstallerConfig
 from .pipeline import run_installation
 from .prompts import collect_config
 from .state import ProgressState
-from .ssh import SSHExecutor
+from .ssh import LocalExecutor
 
 
 def _load_config(path: Path) -> InstallerConfig:
     data = json.loads(path.read_text(encoding="utf-8"))
-    config = InstallerConfig(**data)
+    allowed = {entry.name for entry in fields(InstallerConfig)}
+    filtered = {key: value for key, value in data.items() if key in allowed}
+    config = InstallerConfig(**filtered)
     return config
 
 
 def _save_config(path: Path, config: InstallerConfig) -> None:
-    payload = asdict(config)
-    # SSH-Passwort absichtlich nicht persistent speichern.
-    payload["ssh_password"] = ""
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(asdict(config), indent=2), encoding="utf-8")
 
 
 def _print_summary(config: InstallerConfig) -> None:
@@ -37,29 +36,19 @@ def _print_summary(config: InstallerConfig) -> None:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="odoo-installer",
-        description="Gefuehrte Installation von Odoo auf entfernten Ubuntu-24.04-Servern via SSH.",
+        description="Gefuehrte lokale Installation von Odoo auf Ubuntu-24.04-Servern.",
     )
     parser.add_argument("--config", type=Path, help="Pfad zu einer JSON-Konfigurationsdatei.")
     parser.add_argument("--save-config", type=Path, help="Optionaler Pfad zum Speichern der Konfiguration.")
     parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, welche Kommandos ausgefuehrt werden.")
-    parser.add_argument(
-        "--ask-ssh-password",
-        action="store_true",
-        help="SSH-Passwort interaktiv abfragen (nicht in Konfig speichern).",
-    )
-    parser.add_argument(
-        "--ssh-host-key-mode",
-        choices=["strict", "accept-new", "insecure"],
-        help="Ueberschreibt den Host-Key-Modus aus der Konfiguration.",
-    )
     operation_group = parser.add_mutually_exclusive_group()
-    operation_group.add_argument("--backup", action="store_true", help="Remote-Datenbankbackup erstellen.")
+    operation_group.add_argument("--backup", action="store_true", help="Lokales Datenbankbackup erstellen.")
     operation_group.add_argument(
         "--restore",
-        metavar="REMOTE_BACKUP_PATH",
-        help="Remote-Backupdatei in die konfigurierte Odoo-Datenbank einspielen.",
+        metavar="BACKUP_PATH",
+        help="Lokale Backupdatei in die konfigurierte Odoo-Datenbank einspielen.",
     )
-    parser.add_argument("--backup-dir", help="Zielverzeichnis auf dem Server fuer Backups.")
+    parser.add_argument("--backup-dir", help="Zielverzeichnis auf dem lokalen Server fuer Backups.")
     parser.add_argument("--backup-name", help="Dateiname fuer das Backup (optional, inkl. Endung).")
     parser.add_argument(
         "--backup-keep-last",
@@ -112,6 +101,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
 
     try:
+        if platform.system() != "Linux":
+            raise RuntimeError(
+                "Dieser Installer kann nur lokal auf einem Linux-Zielserver ausgefuehrt werden."
+            )
+
         if args.config:
             config = _load_config(args.config)
             if args.dry_run:
@@ -120,12 +114,6 @@ def main(argv: list[str] | None = None) -> int:
             if args.backup or args.restore:
                 raise ValueError("Fuer --backup/--restore ist --config erforderlich.")
             config = collect_config(default_dry_run=args.dry_run)
-
-        if args.ssh_host_key_mode:
-            config.ssh_host_key_mode = args.ssh_host_key_mode
-
-        if args.ask_ssh_password:
-            config.ssh_password = getpass("SSH-Passwort: ").strip()
 
         config.validate_or_raise()
 
@@ -153,15 +141,7 @@ def main(argv: list[str] | None = None) -> int:
                 print("Abgebrochen.")
                 return 0
 
-        executor = SSHExecutor(
-            host=config.host,
-            user=config.ssh_user,
-            port=config.ssh_port,
-            ssh_key_path=config.ssh_key_path,
-            ssh_password=config.ssh_password or None,
-            host_key_mode=config.ssh_host_key_mode,
-            dry_run=config.dry_run,
-        )
+        executor = LocalExecutor(dry_run=config.dry_run)
 
         try:
             if args.backup:

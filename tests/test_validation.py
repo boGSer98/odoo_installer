@@ -5,8 +5,6 @@ from odoo_installer.models import InstallerConfig
 
 def _base_config() -> InstallerConfig:
     return InstallerConfig(
-        host="example.org",
-        ssh_user="root",
         db_password="secret-db",
         admin_password="secret-admin",
     )
@@ -34,17 +32,15 @@ class ValidationTests(unittest.TestCase):
 
     def test_safe_dict_masks_passwords(self) -> None:
         config = _base_config()
-        config.ssh_password = "linux-login-secret"
         safe = config.safe_dict()
-        self.assertEqual(safe["ssh_password"], "***")
         self.assertEqual(safe["db_password"], "***")
         self.assertEqual(safe["admin_password"], "***")
 
-    def test_invalid_host_key_mode_is_rejected(self) -> None:
+    def test_relative_install_dir_is_rejected(self) -> None:
         config = _base_config()
-        config.ssh_host_key_mode = "unknown"
+        config.install_dir = "opt/odoo"
         errors = config.validate()
-        self.assertIn("ssh_host_key_mode muss 'strict', 'accept-new' oder 'insecure' sein.", errors)
+        self.assertIn("Installationspfad muss ein absoluter Linux-Pfad sein.", errors)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,12 @@
-# Installationsanleitung Linux (Start vom Linux-System)
+# Installationsanleitung Linux (lokaler Start auf dem Zielserver)
 
-Diese Anleitung beschreibt, wie du den `odoo-installer` direkt auf einem Linux-System (z. B. Ubuntu 24.04) installierst und startest.
+Diese Anleitung beschreibt, wie du den `odoo-installer` direkt auf dem Ubuntu-24.04-Server installierst und startest, auf dem Odoo spaeter laufen soll.
 
-## 1. Voraussetzungen auf dem Linux-System
+## 1. Voraussetzungen auf dem Zielserver
 
 ```bash
 sudo apt update
-sudo apt install -y git python3 python3-venv openssh-client
+sudo apt install -y git python3 python3-venv
 ```
 
 ## 2. Repository von GitHub klonen
@@ -16,11 +16,11 @@ git clone https://github.com/boGSer98/odoo_installer.git
 cd odoo_installer
 ```
 
-Optional: auf einen Feature-Branch wechseln, falls du einen PR-Stand testen willst:
+Optional: einen bestimmten Branch testen:
 
 ```bash
 git fetch --all
-git checkout codex/ssh-password-auth
+git checkout <branch-name>
 ```
 
 ## 3. Python-Umgebung einrichten
@@ -42,62 +42,49 @@ Interaktiv starten und Konfiguration speichern:
 odoo-installer --save-config run-config.json
 ```
 
-Hinweise:
-
-- `ssh_password` wird absichtlich **nicht** in `run-config.json` gespeichert.
-- Fuer Linux-Passwort-Login das Passwort beim Start per `--ask-ssh-password` eingeben.
-
 ## 5. Ersttest als Dry-Run
 
 ```bash
-odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode accept-new --dry-run --yes
+odoo-installer --config run-config.json --dry-run --yes
 ```
 
-Damit siehst du alle geplanten Kommandos ohne Aenderungen auf dem Zielsystem.
+Damit siehst du alle geplanten Kommandos ohne Aenderungen auf dem System.
 
 ## 6. Produktiver Installationslauf
 
 ```bash
-odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode accept-new --yes
+odoo-installer --config run-config.json --yes
 ```
 
-Empfohlen:
-
-- `--ssh-host-key-mode accept-new` fuer den ersten Kontakt mit neuen Hosts
-- `--ssh-host-key-mode strict` fuer strengere Produktivumgebungen
+Im Terminal wird dabei eine Statusleiste mit Prozentwert und Anzahl der bereits erledigten Kommandos angezeigt.
 
 ## 7. Optional: Backup/Restore
 
 Backup:
 
 ```bash
-odoo-installer --config run-config.json --backup --backup-format dump --backup-keep-last 7 --ask-ssh-password --yes
+odoo-installer --config run-config.json --backup --backup-format dump --backup-keep-last 7 --yes
 ```
 
 Restore:
 
 ```bash
-odoo-installer --config run-config.json --restore /opt/odoo/backups/DATEI.dump --ask-ssh-password --yes
+odoo-installer --config run-config.json --restore /opt/odoo/backups/DATEI.dump --yes
 ```
 
 ## 8. Typische Fehler und Loesungen
 
-`Host key verification failed`
+`Sudo ohne interaktive Passworteingabe ist nicht verfuegbar`
 
-- Einmal mit `--ssh-host-key-mode accept-new` starten
-- oder alten Key entfernen:
+- Als `root` ausfuehren
+- oder passenden `sudo`-Zugang fuer den aufrufenden Benutzer konfigurieren
 
-```bash
-ssh-keygen -R <hostname-oder-ip>
-```
+`Zielsystem ist nicht Ubuntu 24.04`
 
-`Permission denied (publickey,password)`
+- Installer nur auf Ubuntu 24.04 nutzen
+- oder fuer Testzwecke zuerst mit `--dry-run` pruefen
 
-- Benutzer/Passwort pruefen
-- SSH-Port pruefen (`ssh_port` in der Konfig)
-- auf Zielserver sicherstellen, dass Passwort-Login erlaubt ist (falls ohne Key gearbeitet wird)
+`Port bereits belegt`
 
-`sudo`-Fehler im Installer
-
-- entweder als `root` verbinden
-- oder auf Zielsystem passenden `sudo`-Zugang konfigurieren
+- In der Konfiguration andere Ports waehlen (`http_port`, `longpolling_port`)
+- Oder den belegenden Dienst beenden/umkonfigurieren

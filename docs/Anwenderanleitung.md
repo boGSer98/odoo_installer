@@ -2,17 +2,19 @@
 
 ## Zweck
 
-`odoo_installer` installiert Odoo 19 auf einem entfernten Ubuntu-24.04-Server, der per SSH erreichbar ist.
+`odoo_installer` installiert Odoo 19 auf einem Ubuntu-24.04-Server, direkt lokal auf diesem Zielsystem.
 
 ## Voraussetzungen
 
-- Lokaler Rechner mit Python 3.11+
-- SSH-Zugang zum Zielserver
-- Ausreichende Rechte auf dem Zielserver (`sudo` ohne Passwort oder root)
+- Ubuntu 24.04 Zielserver
+- Python 3.11+
+- Ausreichende Rechte (`sudo` ohne interaktive Passwortabfrage oder root)
 
-## Installation lokal
+## Installation auf dem Zielserver
 
 ```bash
+git clone https://github.com/boGSer98/odoo_installer.git
+cd odoo_installer
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
@@ -28,38 +30,10 @@ Waehrend der Installation zeigt das Tool eine Statusleiste mit Fortschritt in Pr
 
 Das Tool fragt folgende Bereiche gefuehrt ab:
 
-- SSH-Verbindung (Host, Benutzer, Port, Key)
-- SSH-Passwort (optional, falls kein Key/Agent genutzt wird)
 - Odoo-Parameter (Version, Pfade, Service)
 - PostgreSQL-Parameter (DB, Benutzer, Passwort)
 - Weboptionen (Domain, Nginx, Certbot)
 - Sicherheitsoptionen (UFW)
-
-## SSH-Authentifizierung
-
-Key/Agent (Standard):
-
-```bash
-odoo-installer --config run-config.json --yes
-```
-
-Linux-Passwort interaktiv abfragen:
-
-```bash
-odoo-installer --config run-config.json --ask-ssh-password --yes
-```
-
-Host-Key-Modi:
-
-- `strict`: nur bereits bekannte Host Keys akzeptieren
-- `accept-new`: neue Host Keys automatisch akzeptieren (empfohlen)
-- `insecure`: Host-Key-Pruefung deaktivieren (nur Test/Lab)
-
-Beispiel bei `Host key verification failed`:
-
-```bash
-odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode accept-new --yes
-```
 
 ## Dry-Run
 
@@ -67,7 +41,7 @@ odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode a
 odoo-installer --dry-run
 ```
 
-Im Dry-Run werden keine aendernden Kommandos ausgefuehrt. Du siehst nur die geplanten SSH-Kommandos.
+Im Dry-Run werden keine aendernden Kommandos ausgefuehrt. Du siehst nur die geplanten lokalen Shell-Kommandos.
 
 ## Konfiguration speichern und wiederverwenden
 
@@ -110,7 +84,7 @@ odoo-installer --config run-config.json --backup --backup-format zip --yes
 
 Optionen:
 
-- `--backup-dir`: Zielverzeichnis auf dem Remote-Server (Standard: `<install_dir>/backups`)
+- `--backup-dir`: Zielverzeichnis auf dem lokalen Server (Standard: `<install_dir>/backups`)
 - `--backup-name`: Dateiname fuer das Backup
 - `--backup-keep-last N`: nach erfolgreichem Backup nur die letzten `N` DB-Backups behalten
 - `--backup-format`: `zip` (DB + Filestore) oder `dump` (nur DB-Dump)

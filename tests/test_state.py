@@ -6,10 +6,9 @@ from odoo_installer.models import InstallerConfig
 from odoo_installer.state import ProgressState
 
 
-def _config(host: str = "example.org") -> InstallerConfig:
+def _config(service_name: str = "odoo") -> InstallerConfig:
     return InstallerConfig(
-        host=host,
-        ssh_user="root",
+        service_name=service_name,
         db_password="secret-db",
         admin_password="secret-admin",
     )
@@ -30,10 +29,10 @@ class ProgressStateTests(unittest.TestCase):
     def test_resume_detects_config_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             state_path = Path(tmp_dir) / "state.json"
-            ProgressState(state_path, _config(host="a.example.org"), resume=False)
+            ProgressState(state_path, _config(service_name="odoo-a"), resume=False)
 
             with self.assertRaises(RuntimeError):
-                ProgressState(state_path, _config(host="b.example.org"), resume=True)
+                ProgressState(state_path, _config(service_name="odoo-b"), resume=True)
 
     def test_clear_removes_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

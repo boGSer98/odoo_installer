@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 0.1.7 - 2026-05-24
+
+- SSH-basierte Ausfuehrung entfernt; Installer laeuft jetzt ausschliesslich lokal auf dem Linux-Zielserver.
+- CLI um Linux-only Guard erweitert (Start auf Nicht-Linux-Systemen wird sauber abgebrochen).
+- Backup/Restore- und Pipeline-Typen auf lokalen Executor umgestellt.
+- Tests auf lokale Konfiguration ohne SSH-Felder migriert.
+- README und Linux/Anwender-Dokumentation auf `git clone` + lokale Ausfuehrung aktualisiert.
+- `paramiko` als Abhaengigkeit entfernt.
+
 ## 0.1.6 - 2026-05-24
 
 - Terminal-Statusleiste fuer den Installationsfortschritt hinzugefuegt (Prozent + `x/y` Kommandos).
