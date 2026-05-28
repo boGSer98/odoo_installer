@@ -28,11 +28,13 @@ git checkout <branch-name>
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install --upgrade pip
-pip install -e .
+python3 -m pip install --upgrade pip
+python3 -m pip install -e .
+which odoo-installer
 ```
 
 Danach steht der Befehl `odoo-installer` in der aktiven venv bereit.
+Wichtig: Der Parameter heisst `--upgrade` (ohne Leerzeichen), nicht `-- upgrade`.
 
 ## 4. Konfiguration erstellen
 
@@ -73,6 +75,27 @@ odoo-installer --config run-config.json --restore /opt/odoo/backups/DATEI.dump -
 ```
 
 ## 8. Typische Fehler und Loesungen
+
+`odoo-installer: command not found`
+
+- Pruefen, ob die venv aktiv ist (Prompt startet mit `(.venv)`).
+- Falls nicht aktiv:
+
+```bash
+source .venv/bin/activate
+```
+
+- Installation in der venv erneut ausfuehren:
+
+```bash
+python3 -m pip install -e .
+```
+
+- Direkt ohne PATH nutzen:
+
+```bash
+.venv/bin/odoo-installer --save-config run-config.json
+```
 
 `Sudo ohne interaktive Passworteingabe ist nicht verfuegbar`
 
