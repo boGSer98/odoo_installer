@@ -4,7 +4,7 @@ from datetime import datetime, UTC
 import shlex
 
 from .models import InstallerConfig
-from .ssh import SSHExecutor
+from .ssh import LocalExecutor
 
 
 def _sudo(command: str, use_sudo: bool) -> str:
@@ -28,7 +28,7 @@ def _print_result(stdout: str, stderr: str) -> None:
         print(stderr.rstrip())
 
 
-def _run_or_fail(executor: SSHExecutor, command: str, context: str) -> None:
+def _run_or_fail(executor: LocalExecutor, command: str, context: str) -> None:
     result = executor.run(command)
     _print_result(result.stdout, result.stderr)
     if not result.ok:
@@ -54,7 +54,7 @@ def _timestamp() -> str:
 
 
 def _run_retention(
-    executor: SSHExecutor,
+    executor: LocalExecutor,
     config: InstallerConfig,
     backup_root: str,
     dump_ext: str,
@@ -80,7 +80,7 @@ def _run_retention(
 
 
 def run_backup(
-    executor: SSHExecutor,
+    executor: LocalExecutor,
     config: InstallerConfig,
     backup_dir: str | None = None,
     backup_name: str | None = None,
@@ -141,7 +141,7 @@ def run_backup(
 
 
 def run_restore(
-    executor: SSHExecutor,
+    executor: LocalExecutor,
     config: InstallerConfig,
     backup_path: str,
     force: bool = True,

@@ -11,11 +11,11 @@ class _FakeExecutor:
         self.fail_on = fail_on
         self.commands: list[str] = []
 
-    def run(self, remote_command: str) -> CommandResult:
-        self.commands.append(remote_command)
-        if remote_command in self.fail_on:
-            return CommandResult(command=[remote_command], returncode=1, stdout="", stderr="boom")
-        return CommandResult(command=[remote_command], returncode=0, stdout="", stderr="")
+    def run(self, local_command: str) -> CommandResult:
+        self.commands.append(local_command)
+        if local_command in self.fail_on:
+            return CommandResult(command=[local_command], returncode=1, stdout="", stderr="boom")
+        return CommandResult(command=[local_command], returncode=0, stdout="", stderr="")
 
 
 class _FakeProgress:
@@ -35,8 +35,6 @@ class _FakeProgress:
 
 def _config() -> InstallerConfig:
     return InstallerConfig(
-        host="example.org",
-        ssh_user="root",
         db_password="secret-db",
         admin_password="secret-admin",
     )

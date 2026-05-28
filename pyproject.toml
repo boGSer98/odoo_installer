@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "odoo-installer"
-version = "0.1.0"
-description = "Gefuehrter Installer fuer Odoo 19 auf Ubuntu 24.04 via SSH"
+version = "0.1.7"
+description = "Gefuehrter Installer fuer Odoo 19 auf Ubuntu 24.04 (lokale Ausfuehrung)"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["paramiko>=3.4,<4"]
+dependencies = []
 
 [project.scripts]
 odoo-installer = "odoo_installer.cli:main"

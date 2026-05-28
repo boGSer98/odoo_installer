@@ -1,35 +1,27 @@
 import unittest
+import shutil
+import platform
 
-from odoo_installer.ssh import SSHExecutor
+from odoo_installer.ssh import LocalExecutor
 
 
-class SSHExecutorTests(unittest.TestCase):
-    def test_dry_run_key_mode_includes_accept_new_and_batchmode(self) -> None:
-        executor = SSHExecutor(
-            host="example.org",
-            user="root",
-            host_key_mode="accept-new",
-            dry_run=True,
-        )
+class LocalExecutorTests(unittest.TestCase):
+    def test_dry_run_emits_local_marker(self) -> None:
+        executor = LocalExecutor(dry_run=True)
         result = executor.run("echo connected")
         self.assertTrue(result.ok)
-        self.assertIn("StrictHostKeyChecking=accept-new", result.stdout)
-        self.assertIn("BatchMode=yes", result.stdout)
+        self.assertIn("[DRY-RUN][LOCAL]", result.stdout)
+        self.assertIn("bash -lc", result.stdout)
 
-    def test_dry_run_password_mode_uses_password_auth_options(self) -> None:
-        executor = SSHExecutor(
-            host="example.org",
-            user="root",
-            ssh_password="secret",
-            host_key_mode="insecure",
-            dry_run=True,
-        )
-        result = executor.run("echo connected")
+    def test_real_run_executes_command(self) -> None:
+        if platform.system() != "Linux":
+            self.skipTest("Real-run Test wird nur unter Linux ausgefuehrt.")
+        if shutil.which("bash") is None:
+            self.skipTest("bash ist auf diesem System nicht verfuegbar.")
+        executor = LocalExecutor(dry_run=False)
+        result = executor.run("printf '%s' connected")
         self.assertTrue(result.ok)
-        self.assertIn("BatchMode=no", result.stdout)
-        self.assertIn("PreferredAuthentications=password,keyboard-interactive,publickey", result.stdout)
-        self.assertIn("StrictHostKeyChecking=no", result.stdout)
-        self.assertIn("UserKnownHostsFile=", result.stdout)
+        self.assertEqual(result.stdout, "connected")
 
 
 if __name__ == "__main__":
