@@ -20,11 +20,16 @@ def _load_config(path: Path) -> InstallerConfig:
     allowed = {entry.name for entry in fields(InstallerConfig)}
     filtered = {key: value for key, value in data.items() if key in allowed}
     config = InstallerConfig(**filtered)
+    # `dry_run` ist ein Laufzeit-Flag und soll bei Konfigurationsdateien
+    # nicht dauerhaft den Produktivlauf blockieren.
+    config.dry_run = False
     return config
 
 
 def _save_config(path: Path, config: InstallerConfig) -> None:
-    path.write_text(json.dumps(asdict(config), indent=2), encoding="utf-8")
+    payload = asdict(config)
+    payload["dry_run"] = False
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def _print_summary(config: InstallerConfig) -> None:
