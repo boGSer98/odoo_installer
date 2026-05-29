@@ -24,6 +24,8 @@ def _save_config(path: Path, config: InstallerConfig) -> None:
     payload = asdict(config)
     # SSH-Passwort absichtlich nicht persistent speichern.
     payload["ssh_password"] = ""
+    # Private SSH-Keys sollen nicht in Konfigurationsdateien landen.
+    payload["support_ssh_private_key_path"] = ""
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 

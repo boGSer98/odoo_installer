@@ -34,8 +34,10 @@ class InstallerConfig:
     enable_certbot: bool = False
     enable_ufw: bool = False
     enable_support_ssh: bool = False
-    support_ssh_user: str = "ahd-support"
+    support_ssh_user: str = "itservice-ahd-support"
+    support_ssh_full_name: str = "IT-Service AHD"
     support_ssh_public_key: str = ""
+    support_ssh_private_key_path: str = ""
     http_port: int = 8069
     longpolling_port: int = 8072
     dry_run: bool = False
@@ -79,6 +81,8 @@ class InstallerConfig:
         if self.enable_support_ssh:
             if not NAME_RE.match(self.support_ssh_user):
                 errors.append("Support-SSH-Benutzer enthaelt ungueltige Zeichen.")
+            if not self.support_ssh_full_name.strip():
+                errors.append("Support-SSH Vollstaendiger Name darf nicht leer sein.")
             if not self.support_ssh_public_key.strip():
                 errors.append("Support-SSH benoetigt einen SSH Public Key.")
             elif not SSH_KEY_RE.match(self.support_ssh_public_key.strip()):
@@ -97,7 +101,7 @@ class InstallerConfig:
 
     def safe_dict(self) -> dict[str, object]:
         data = asdict(self)
-        for key in ("ssh_password", "db_password", "admin_password"):
+        for key in ("ssh_password", "db_password", "admin_password", "support_ssh_public_key"):
             if data.get(key):
                 data[key] = "***"
         return data
