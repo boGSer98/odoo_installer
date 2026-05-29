@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import re
 
 
@@ -40,9 +40,31 @@ class InstallerConfig:
     support_ssh_full_name: str = "IT-Service AHD"
     support_ssh_public_key: str = ""
     support_ssh_private_key_path: str = ""
+    custom_addons_enabled: bool = True
+    custom_addons_paths: list[str] = field(default_factory=list)
+    custom_addons_repositories: list[dict[str, str]] = field(default_factory=list)
+    custom_addons_install_python_requirements: bool = False
     http_port: int = 8069
     longpolling_port: int = 8072
     dry_run: bool = False
+
+    def effective_custom_addons_paths(self) -> list[str]:
+        if not self.custom_addons_enabled:
+            return []
+
+        paths = [f"{self.install_dir.rstrip('/')}/custom-addons"]
+        paths.extend(self.custom_addons_paths)
+        for repository in self.custom_addons_repositories:
+            target = repository.get("target", "").strip()
+            if target:
+                paths.append(target)
+
+        deduped: list[str] = []
+        for path in paths:
+            cleaned = path.rstrip("/") or "/"
+            if cleaned not in deduped:
+                deduped.append(cleaned)
+        return deduped
 
     def validate(self) -> list[str]:
         errors: list[str] = []
@@ -67,6 +89,22 @@ class InstallerConfig:
             errors.append("Service-Name enthaelt ungueltige Zeichen.")
         if self.data_dir and not self.data_dir.startswith("/"):
             errors.append("data_dir muss ein absoluter Linux-Pfad sein.")
+        if self.custom_addons_enabled:
+            for path in self.custom_addons_paths:
+                if not path.startswith("/"):
+                    errors.append(f"Custom-Addon-Pfad muss absolut sein: {path}")
+            for index, repository in enumerate(self.custom_addons_repositories, start=1):
+                url = repository.get("url", "").strip()
+                branch = repository.get("branch", "").strip()
+                target = repository.get("target", "").strip()
+                if not url:
+                    errors.append(f"Custom-Addon-Repository {index} benoetigt eine url.")
+                if not branch:
+                    errors.append(f"Custom-Addon-Repository {index} benoetigt einen branch.")
+                if not target:
+                    errors.append(f"Custom-Addon-Repository {index} benoetigt ein target.")
+                elif not target.startswith("/"):
+                    errors.append(f"Custom-Addon-Repository target muss absolut sein: {target}")
         if not NAME_RE.match(self.db_user):
             errors.append("Datenbankbenutzer enthaelt ungueltige Zeichen.")
         if not NAME_RE.match(self.db_name):

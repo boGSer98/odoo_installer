@@ -15,6 +15,7 @@ Linux-Setup Schritt fuer Schritt: `docs/Installationsanleitung_Linux.md`
 - Preflight fuer Ubuntu-Version, SSH-Konnektivitaet, RAM, Disk und Port-Hinweise
 - Idempotente Grundinstallation von Odoo aus dem offiziellen Git-Repository
 - Erstellung von `odoo.conf`, `systemd`-Service und optional Nginx/Certbot/UFW
+- Custom-Addons-Pfade und optionale Git-Repositories werden angelegt, synchronisiert und automatisch in `addons_path` aufgenommen
 - Automatische Initialisierung leerer Odoo-Datenbanken mit dem Basismodul vor dem ersten Service-Start
 - `--dry-run` fuer sichere Vorschau der ausgefuehrten Kommandos
 - Resume-Funktion mit lokaler State-Datei (`--resume`, `--state-file`)
@@ -80,6 +81,25 @@ Lokale Installation ohne zusaetzliche SSH-Verbindung, wenn du bereits auf dem Ku
 ```powershell
 odoo-installer --config run-config.json --local --yes
 ```
+
+Custom-Addons koennen in `run-config.json` vorbereitet werden:
+
+```json
+{
+  "custom_addons_enabled": true,
+  "custom_addons_paths": ["/srv/odoo/customer-addons"],
+  "custom_addons_repositories": [
+    {
+      "url": "https://github.com/example/customer-addons.git",
+      "branch": "19.0",
+      "target": "/opt/odoo/custom-addons/customer"
+    }
+  ],
+  "custom_addons_install_python_requirements": false
+}
+```
+
+Der Standardpfad `<install_dir>/custom-addons` bleibt automatisch aktiv, solange `custom_addons_enabled` nicht auf `false` gesetzt wird.
 
 Backup erstellen (auf dem Remote-Server):
 

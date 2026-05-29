@@ -49,9 +49,40 @@ Hinweise:
 - Der Private Key fuer den optionalen AHD Support-Zugriff wird ebenfalls **nicht** in `run-config.json` gespeichert.
 - Fuer Linux-Passwort-Login das Passwort beim Start per `--ask-ssh-password` eingeben.
 
-### AHD Support-Zugriff in Schritt 5
+### Custom-Addons in Schritt 3
 
-Wenn du den Punkt **5 AHD Support-Zugriff** im interaktiven Installer aktivierst, erzeugt der Installer automatisch einen eigenen lokalen SSH-Key fuer den Support-Zugang.
+Der interaktive Punkt **3 Custom-Addons** bereitet Addon-Pfade fuer Kunden- oder Partner-Module vor. Standardmaessig wird `<install_dir>/custom-addons` angelegt und in `addons_path` aufgenommen.
+
+Optional kannst du weitere absolute Pfade angeben, z. B.:
+
+```text
+/srv/odoo/customer-addons,/srv/odoo/partner-addons
+```
+
+Optional koennen auch Git-Repositories definiert werden. Der Installer klont sie als Odoo-Systembenutzer oder aktualisiert bestehende Checkouts per `git fetch`, `git checkout` und `git pull --ff-only`. Repository-Ziele werden automatisch in `addons_path` aufgenommen.
+
+Beispiel fuer `run-config.json`:
+
+```json
+{
+  "custom_addons_enabled": true,
+  "custom_addons_paths": ["/srv/odoo/customer-addons"],
+  "custom_addons_repositories": [
+    {
+      "url": "https://github.com/example/customer-addons.git",
+      "branch": "19.0",
+      "target": "/opt/odoo/custom-addons/customer"
+    }
+  ],
+  "custom_addons_install_python_requirements": false
+}
+```
+
+`custom_addons_install_python_requirements` sollte nur bewusst aktiviert werden. Dann installiert der Installer eine vorhandene `requirements.txt` aus jedem konfigurierten Addon-Repository in die Odoo-venv.
+
+### AHD Support-Zugriff in Schritt 6
+
+Wenn du den Punkt **6 AHD Support-Zugriff** im interaktiven Installer aktivierst, erzeugt der Installer automatisch einen eigenen lokalen SSH-Key fuer den Support-Zugang.
 
 Standardwerte:
 
@@ -85,7 +116,7 @@ odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode a
 
 Wenn der AHD Support-Zugriff aktiviert ist, zeigt der Dry-Run auch die geplanten Schritte fuer den Benutzer `itservice-ahd-support`, `authorized_keys`, Passwortsperre und sudoers-Konfiguration an.
 
-Der Dry-Run zeigt ausserdem die automatische Odoo-Datenbankinitialisierung. Der Installer prueft, ob die Tabelle `ir_module_module` bereits existiert. Falls nicht, wird die Datenbank vor dem Service-Start mit `-i base --without-demo=all --stop-after-init` initialisiert. Die generierte `addons_path` enthaelt den Odoo-Core-Pfad `<install_dir>/src/odoo/odoo/addons`, den Standard-Addon-Pfad `<install_dir>/src/odoo/addons` und `<install_dir>/custom-addons`.
+Der Dry-Run zeigt ausserdem die automatische Odoo-Datenbankinitialisierung. Der Installer prueft, ob die Tabelle `ir_module_module` bereits existiert. Falls nicht, wird die Datenbank vor dem Service-Start mit `-i base --without-demo=all --stop-after-init` initialisiert. Die generierte `addons_path` enthaelt den Odoo-Core-Pfad `<install_dir>/src/odoo/odoo/addons`, den Standard-Addon-Pfad `<install_dir>/src/odoo/addons`, `<install_dir>/custom-addons` sowie alle zusaetzlichen Custom-Addon-Pfade und Repository-Ziele.
 
 ## 6. Produktiver Installationslauf
 

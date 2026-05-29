@@ -32,6 +32,7 @@ Das Tool fragt folgende Bereiche gefuehrt ab:
 - Ausfuehrungsmodus: lokal auf diesem System oder remote per SSH
 - SSH-Passwort (optional, falls kein Key/Agent genutzt wird)
 - Odoo-Parameter (Version, Pfade, Service)
+- Custom-Addons-Pfade und optionale Git-Repositories
 - PostgreSQL-Parameter (DB, Benutzer, Passwort)
 - Weboptionen (Domain, Nginx, Certbot)
 - Sicherheitsoptionen (UFW)
@@ -73,9 +74,44 @@ Beispiel bei `Host key verification failed`:
 odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode accept-new --yes
 ```
 
+## Custom-Addons
+
+Im interaktiven Schritt **3 Custom-Addons** kann der Installer Kunden- oder Partner-Addons vorbereiten.
+
+Verhalten:
+
+- `<install_dir>/custom-addons` wird standardmaessig angelegt und in `addons_path` aufgenommen.
+- Weitere absolute Pfade koennen ueber `custom_addons_paths` ergaenzt werden.
+- Git-Repositories koennen ueber `custom_addons_repositories` als Odoo-Systembenutzer geklont oder aktualisiert werden.
+- Repository-Ziele werden ebenfalls in `addons_path` aufgenommen.
+- `requirements.txt` aus Addon-Repositories wird nur installiert, wenn `custom_addons_install_python_requirements` auf `true` gesetzt ist.
+
+Beispiel:
+
+```json
+{
+  "custom_addons_enabled": true,
+  "custom_addons_paths": ["/srv/odoo/customer-addons"],
+  "custom_addons_repositories": [
+    {
+      "url": "https://github.com/example/customer-addons.git",
+      "branch": "19.0",
+      "target": "/opt/odoo/custom-addons/customer"
+    }
+  ],
+  "custom_addons_install_python_requirements": false
+}
+```
+
+Die erzeugte Odoo-Konfiguration enthaelt danach z. B.:
+
+```text
+addons_path = /opt/odoo/src/odoo/odoo/addons,/opt/odoo/src/odoo/addons,/opt/odoo/custom-addons,/srv/odoo/customer-addons,/opt/odoo/custom-addons/customer
+```
+
 ## AHD Support-Zugriff
 
-Im interaktiven Schritt **5 AHD Support-Zugriff** kann ein dedizierter Support-Benutzer fuer IT-Service AHD eingerichtet werden.
+Im interaktiven Schritt **6 AHD Support-Zugriff** kann ein dedizierter Support-Benutzer fuer IT-Service AHD eingerichtet werden.
 
 Bei Aktivierung erzeugt der Installer lokal automatisch ein eigenes RSA-4096-SSH-Key-Paar. Der Private Key wird im PEM-Format ausgegeben, damit Clients, die PEM verlangen, den Key direkt importieren koennen. Der Public Key wird fuer den Support-Benutzer auf dem Zielserver genutzt.
 
@@ -192,9 +228,10 @@ Optionen:
 - Python-Umgebung unter `<install_dir>/venv`
 - Konfigurationsdatei unter `/etc/<service_name>.conf`
 - `systemd`-Service unter `/etc/systemd/system/<service_name>.service`
+- Custom-Addons-Standardpfad unter `<install_dir>/custom-addons` sowie optional weitere Pfade/Repository-Ziele
 - optionaler Support-Benutzer `itservice-ahd-support` mit Public-Key-Zugriff und gesperrtem Passwort-Login
 
-Vor dem ersten Start initialisiert der Installer die konfigurierte Odoo-Datenbank automatisch mit dem Basismodul (`-i base --without-demo=all --stop-after-init`), falls die Datenbank noch keine Odoo-Tabellen enthaelt. Die erzeugte Odoo-Konfiguration enthaelt dabei sowohl den Core-Addon-Pfad `<install_dir>/src/odoo/odoo/addons` als auch `<install_dir>/src/odoo/addons` und `<install_dir>/custom-addons`, damit das Basismodul gefunden wird. Dadurch ist die Weboberflaeche nach erfolgreicher Installation direkt unter dem konfigurierten HTTP-Port erreichbar.
+Vor dem ersten Start initialisiert der Installer die konfigurierte Odoo-Datenbank automatisch mit dem Basismodul (`-i base --without-demo=all --stop-after-init`), falls die Datenbank noch keine Odoo-Tabellen enthaelt. Die erzeugte Odoo-Konfiguration enthaelt dabei sowohl den Core-Addon-Pfad `<install_dir>/src/odoo/odoo/addons` als auch `<install_dir>/src/odoo/addons`, `<install_dir>/custom-addons` und alle konfigurierten Custom-Addon-Pfade, damit Basis- und Kundenmodule gefunden werden. Dadurch ist die Weboberflaeche nach erfolgreicher Installation direkt unter dem konfigurierten HTTP-Port erreichbar.
 
 ## Fehlerbehandlung
 
