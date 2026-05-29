@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- PostgreSQL-Datenbanken werden mit UTF8-Encoding (`--encoding=UTF8 --locale=C.UTF-8 --template=template0`) angelegt; noch nicht initialisierte SQL_ASCII-Datenbanken werden automatisch neu erstellt, damit Odoo Unicode/JSON-Daten laden kann.
 - Odoo-Datenbankinitialisierung nutzt jetzt ein mehrzeiliges Shell-Skript ohne `||`-Kurzschlussoperatoren und gibt bei Fehlern Vorabdiagnosen sowie die letzten 120 Odoo-Logzeilen aus.
 - Odoo-Konfiguration schreibt jetzt auch den Core-Addon-Pfad `<install_dir>/src/odoo/odoo/addons`, damit `base` bei der Erstinitialisierung gefunden wird.
 - Leere Odoo-Datenbanken werden vor dem ersten Service-Start automatisch mit dem Basismodul initialisiert, um HTTP-500-Fehler durch uninitialisierte Datenbanken zu vermeiden.

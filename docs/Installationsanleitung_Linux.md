@@ -145,7 +145,7 @@ ssh-keygen -R <hostname-oder-ip>
 sudo tail -n 100 /opt/odoo/logs/odoo.log
 ```
 
-- Wenn die Datenbank noch nicht initialisiert wurde, Installer aktualisieren und lokal erneut starten:
+- Wenn die Datenbank noch nicht initialisiert wurde oder der Odoo-Log `server's encoding SQL_ASCII` meldet, Installer aktualisieren und lokal erneut starten. Nicht initialisierte Nicht-UTF8-Datenbanken werden dann automatisch mit UTF8 neu angelegt:
 
 ```bash
 git pull

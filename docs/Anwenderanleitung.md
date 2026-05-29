@@ -210,11 +210,11 @@ Wenn `http://localhost:8069` direkt nach einer Installation mit einem HTTP-500-F
 sudo tail -n 100 /opt/odoo/logs/odoo.log
 ```
 
-Bei aelteren Installer-Staenden konnte die PostgreSQL-Datenbank angelegt, aber noch nicht als Odoo-Datenbank initialisiert sein. Aktualisiere in diesem Fall den Installer und starte ihn lokal erneut:
+Bei aelteren Installer-Staenden konnte die PostgreSQL-Datenbank angelegt, aber noch nicht als Odoo-Datenbank initialisiert sein. Wenn der Odoo-Log `unsupported Unicode escape sequence` und `server's encoding SQL_ASCII` meldet, wurde die Datenbank mit falschem Encoding angelegt. Aktualisiere in diesem Fall den Installer und starte ihn lokal erneut:
 
 ```bash
 git pull
 odoo-installer --config run-config.json --local --yes
 ```
 
-Der Lauf ist idempotent und initialisiert eine noch leere Odoo-Datenbank nachtraeglich.
+Der Lauf ist idempotent und initialisiert eine noch leere Odoo-Datenbank nachtraeglich. Noch nicht initialisierte Datenbanken mit Nicht-UTF8-Encoding werden automatisch mit UTF8 neu angelegt.
