@@ -348,12 +348,25 @@ WantedBy=multi-user.target
         conf_path=conf_path,
     )
 
+    init_db_command = _as_user(
+        "if ! psql -d {db_name} -Atc \"SELECT to_regclass('public.ir_module_module')\" | grep -qx ir_module_module; then "
+        "{python_bin} {odoo_bin} -c {conf_path} -d {db_name} -i base --without-demo=all --stop-after-init; fi".format(
+            db_name=shlex.quote(config.db_name),
+            python_bin=shlex.quote(f"{venv_dir}/bin/python3"),
+            odoo_bin=shlex.quote(f"{src_dir}/odoo-bin"),
+            conf_path=shlex.quote(conf_path),
+        ),
+        config.odoo_system_user,
+        config.use_sudo,
+    )
+
     commands_service = [
         _write_file_command(conf_path, config_file.rstrip(), config.use_sudo),
         _sudo(
             f"chown {shlex.quote(config.odoo_system_user)}:{shlex.quote(config.odoo_system_user)} {shlex.quote(conf_path)}",
             config.use_sudo,
         ),
+        init_db_command,
         _write_file_command(service_path, service_file.rstrip(), config.use_sudo),
         _sudo("systemctl daemon-reload", config.use_sudo),
         _sudo(f"systemctl enable {shlex.quote(config.service_name)}", config.use_sudo),

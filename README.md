@@ -15,6 +15,7 @@ Linux-Setup Schritt fuer Schritt: `docs/Installationsanleitung_Linux.md`
 - Preflight fuer Ubuntu-Version, SSH-Konnektivitaet, RAM, Disk und Port-Hinweise
 - Idempotente Grundinstallation von Odoo aus dem offiziellen Git-Repository
 - Erstellung von `odoo.conf`, `systemd`-Service und optional Nginx/Certbot/UFW
+- Automatische Initialisierung leerer Odoo-Datenbanken mit dem Basismodul vor dem ersten Service-Start
 - `--dry-run` fuer sichere Vorschau der ausgefuehrten Kommandos
 - Resume-Funktion mit lokaler State-Datei (`--resume`, `--state-file`)
 - Optionaler Rollback-Modus bei Fehlschlag (`--rollback-on-fail`)
@@ -105,6 +106,21 @@ odoo-installer --config run-config.json --restore /opt/odoo/backups/odoo_2026052
 - Der optionale AHD Support-Zugang erzeugt den Private Key lokal unter `~/.odoo-installer/support-keys/` im PEM-Format, zeigt ihn einmal zum Kopieren in Termius/Termux an, schreibt nur den Public Key auf das Kundensystem, sperrt Passwort-Login fuer den Support-Benutzer und validiert die sudoers-Datei mit `visudo`.
 - `wkhtmltopdf` wird aktuell ueber Ubuntu-Pakete installiert. Fuer produktive PDF-Layouts kann eine gezielte Versionierung erforderlich sein.
 - Rollback ist bewusst konservativ und deckt nur unterstuetzte Schritte ab (best effort, kein vollstaendiges System-Undo).
+
+## Troubleshooting
+
+Bei `500 Internal Server Error` nach der Installation zuerst den Odoo-Log pruefen:
+
+```bash
+sudo tail -n 100 /opt/odoo/logs/odoo.log
+```
+
+Wenn die Datenbank noch leer bzw. nicht als Odoo-Datenbank initialisiert ist, den aktuellen Installer pullen und erneut lokal starten:
+
+```powershell
+git pull
+odoo-installer --config run-config.json --local --yes
+```
 
 ## Naechste Schritte
 

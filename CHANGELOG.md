@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Leere Odoo-Datenbanken werden vor dem ersten Service-Start automatisch mit dem Basismodul initialisiert, um HTTP-500-Fehler durch uninitialisierte Datenbanken zu vermeiden.
 - Lokalen Ausfuehrungsmodus (`--local`) hinzugefuegt, damit der Installer direkt auf dem Kundensystem ohne zusaetzliche SSH-Verbindung laufen kann.
 - AHD Support-Key-Erzeugung auf RSA Private Key im PEM-Format umgestellt.
 - Installationsanleitung und Anwenderanleitung um den automatisch erzeugten AHD Support-SSH-Key, den Benutzer `itservice-ahd-support` und den vollstaendigen Namen `IT-Service AHD` ergaenzt.
