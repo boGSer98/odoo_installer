@@ -306,7 +306,7 @@ db_port = False
 db_user = {db_user}
 db_password = {db_password}
 db_name = {db_name}
-addons_path = {src_dir}/addons,{install_dir}/custom-addons
+addons_path = {src_dir}/odoo/addons,{src_dir}/addons,{install_dir}/custom-addons
 logfile = {log_dir}/odoo.log
 data_dir = {data_dir}
 proxy_mode = {proxy_mode}
@@ -350,11 +350,15 @@ WantedBy=multi-user.target
 
     init_db_command = _as_user(
         "if ! psql -d {db_name} -Atc \"SELECT to_regclass('public.ir_module_module')\" | grep -qx ir_module_module; then "
-        "{python_bin} {odoo_bin} -c {conf_path} -d {db_name} -i base --without-demo=all --stop-after-init; fi".format(
+        "cd {src_dir} && {python_bin} {odoo_bin} -c {conf_path} -d {db_name} -i base --without-demo=all --stop-after-init || "
+        "(echo 'Odoo-Datenbankinitialisierung fehlgeschlagen. Letzte Logzeilen:' >&2; tail -n 80 {log_file} >&2 || true; exit 1); "
+        "fi".format(
             db_name=shlex.quote(config.db_name),
+            src_dir=shlex.quote(src_dir),
             python_bin=shlex.quote(f"{venv_dir}/bin/python3"),
             odoo_bin=shlex.quote(f"{src_dir}/odoo-bin"),
             conf_path=shlex.quote(conf_path),
+            log_file=shlex.quote(f"{log_dir}/odoo.log"),
         ),
         config.odoo_system_user,
         config.use_sudo,
