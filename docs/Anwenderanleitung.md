@@ -37,6 +37,7 @@ Das Tool fragt folgende Bereiche gefuehrt ab:
 - Weboptionen (Domain, Nginx, Certbot)
 - Sicherheitsoptionen (UFW)
 - AHD Support-Zugriff mit automatisch erzeugtem SSH-Key
+- optionales restic Cloud-Backup mit Cronjob und Retention
 
 ## SSH-Authentifizierung
 
@@ -107,6 +108,56 @@ Die erzeugte Odoo-Konfiguration enthaelt danach z. B.:
 
 ```text
 addons_path = /opt/odoo/src/odoo/odoo/addons,/opt/odoo/src/odoo/addons,/opt/odoo/custom-addons,/srv/odoo/customer-addons,/opt/odoo/custom-addons/customer
+```
+
+## Restic Cloud-Backups
+
+Im interaktiven Schritt **7 Backups** kann der Installer ein verschluesseltes Cloud-Backup mit `restic` und Cronjob vorbereiten.
+
+Der Installer richtet dabei ein:
+
+- Paket `restic`
+- `/etc/odoo-backup/env` mit Repository-URL und Passwortdatei-Pfad
+- `/usr/local/sbin/odoo-backup` als ausfuehrbares Backup-Script
+- `/etc/cron.d/odoo-backup` fuer den Zeitplan
+- `/var/log/odoo-backup.log` als Logziel des Cronjobs
+- `/var/lib/odoo-backup/work` als temporaeres Arbeitsverzeichnis
+
+Gesichert werden standardmaessig:
+
+- PostgreSQL-Dump der Odoo-Datenbank als Custom-Format-Dump
+- Odoo-Filestore unter `<data_dir>/filestore/<db_name>`
+- `/etc/<service_name>.conf`
+- Custom-Addon-Pfade inklusive Repository-Ziele
+
+Beispiel fuer `run-config.json`:
+
+```json
+{
+  "backup_enabled": true,
+  "backup_repository_url": "sftp:backup@example.com:/backups/customer-odoo",
+  "backup_password_file": "/etc/odoo-backup/restic-password",
+  "backup_schedule": "0 2 * * *",
+  "backup_retention_daily": 7,
+  "backup_retention_weekly": 4,
+  "backup_retention_monthly": 6
+}
+```
+
+Das Restic-Passwort wird bewusst nicht in der JSON-Konfiguration gespeichert. Lege die Datei vor dem produktiven Lauf auf dem Zielsystem an:
+
+```bash
+sudo install -d -m 700 -o root -g root /etc/odoo-backup
+sudo sh -c 'umask 077; printf "%s\n" "<RESTIC-PASSWORT>" > /etc/odoo-backup/restic-password'
+sudo chown root:root /etc/odoo-backup/restic-password
+sudo chmod 600 /etc/odoo-backup/restic-password
+```
+
+Nach der Installation kann ein Backup manuell getestet werden:
+
+```bash
+sudo /usr/local/sbin/odoo-backup
+sudo tail -n 100 /var/log/odoo-backup.log
 ```
 
 ## AHD Support-Zugriff
@@ -229,6 +280,7 @@ Optionen:
 - Konfigurationsdatei unter `/etc/<service_name>.conf`
 - `systemd`-Service unter `/etc/systemd/system/<service_name>.service`
 - Custom-Addons-Standardpfad unter `<install_dir>/custom-addons` sowie optional weitere Pfade/Repository-Ziele
+- optional restic-Backup-Dateien unter `/etc/odoo-backup/`, `/usr/local/sbin/odoo-backup` und `/etc/cron.d/odoo-backup`
 - optionaler Support-Benutzer `itservice-ahd-support` mit Public-Key-Zugriff und gesperrtem Passwort-Login
 
 Vor dem ersten Start initialisiert der Installer die konfigurierte Odoo-Datenbank automatisch mit dem Basismodul (`-i base --without-demo=all --stop-after-init`), falls die Datenbank noch keine Odoo-Tabellen enthaelt. Die erzeugte Odoo-Konfiguration enthaelt dabei sowohl den Core-Addon-Pfad `<install_dir>/src/odoo/odoo/addons` als auch `<install_dir>/src/odoo/addons`, `<install_dir>/custom-addons` und alle konfigurierten Custom-Addon-Pfade, damit Basis- und Kundenmodule gefunden werden. Dadurch ist die Weboberflaeche nach erfolgreicher Installation direkt unter dem konfigurierten HTTP-Port erreichbar.

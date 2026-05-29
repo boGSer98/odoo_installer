@@ -41,6 +41,7 @@ def _print_summary(config: InstallerConfig) -> None:
             ("UFW Firewall-Basisregeln", config.enable_ufw),
             ("AHD Support-SSH-Zugang", config.enable_support_ssh),
             ("Custom-Addons-Pfade/Git-Repositories", config.custom_addons_enabled),
+            ("Restic Cloud-Backup + Cronjob", config.backup_enabled),
         ]
     )
 
