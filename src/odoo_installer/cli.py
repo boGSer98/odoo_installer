@@ -5,14 +5,13 @@ from dataclasses import asdict
 from getpass import getpass
 import json
 from pathlib import Path
-import sys
-
 from .backup_restore import run_backup, run_restore
 from .models import InstallerConfig
 from .pipeline import run_installation
 from .prompts import collect_config
 from .state import ProgressState
 from .ssh import SSHExecutor
+from .ui import ui
 
 
 def _load_config(path: Path) -> InstallerConfig:
@@ -29,9 +28,18 @@ def _save_config(path: Path, config: InstallerConfig) -> None:
 
 
 def _print_summary(config: InstallerConfig) -> None:
-    print("\nKonfigurationsuebersicht:")
-    for key, value in config.safe_dict().items():
-        print(f"- {key}: {value}")
+    ui.section("Konfigurationsuebersicht", "✓")
+    ui.key_values(config.safe_dict())
+    ui.section("Installationsumfang", "→")
+    ui.checklist(
+        [
+            ("Odoo + PostgreSQL + Systemd-Service", True),
+            ("Nginx Reverse Proxy", config.enable_nginx),
+            ("Let's Encrypt Zertifikat", config.enable_certbot),
+            ("UFW Firewall-Basisregeln", config.enable_ufw),
+            ("AHD Support-SSH-Zugang", config.enable_support_ssh),
+        ]
+    )
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -150,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
         if not args.yes:
             confirm = input(f"\n{operation_label} starten? (j/n) [j]: ").strip().lower()
             if confirm not in {"", "j", "ja", "y", "yes"}:
-                print("Abgebrochen.")
+                ui.warning("Abgebrochen.")
                 return 0
 
         executor = SSHExecutor(
@@ -174,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
                     include_filestore=not args.no_filestore,
                     keep_last=args.backup_keep_last,
                 )
-                print(f"\nBackup-Pfad: {backup_path}")
+                ui.success(f"Backup-Pfad: {backup_path}")
                 return 0
 
             if args.restore:
@@ -186,21 +194,22 @@ def main(argv: list[str] | None = None) -> int:
                     neutralize=args.neutralize,
                     restart_service=not args.no_restart_after_restore,
                 )
+                ui.success("Restore abgeschlossen.")
                 return 0
 
             progress = None if config.dry_run else ProgressState(args.state_file, config, resume=args.resume)
             run_installation(executor, config, progress=progress, rollback_on_fail=args.rollback_on_fail)
             if progress:
                 progress.clear()
-            print("\nInstallation abgeschlossen.")
+            ui.success("Installation abgeschlossen.")
             return 0
         finally:
             executor.close()
     except KeyboardInterrupt:
-        print("\nAbbruch durch Benutzer.")
+        ui.warning("Abbruch durch Benutzer.")
         return 130
     except Exception as exc:  # noqa: BLE001
-        print(f"\nFehler: {exc}", file=sys.stderr)
+        ui.error(f"Fehler: {exc}")
         return 1
 
 

@@ -4,6 +4,7 @@ from getpass import getpass
 import secrets
 
 from .models import InstallerConfig
+from .ui import ui
 
 
 def _normalize_empty(value: str | None) -> str | None:
@@ -76,8 +77,10 @@ def generate_secret() -> str:
 
 
 def collect_config(default_dry_run: bool = False) -> InstallerConfig:
-    print("Gefuehrter Odoo-Installer fuer Ubuntu 24.04")
-    print("Bitte die Zielumgebung angeben.")
+    ui.banner("AHD Odoo Installer", "Gefuehrte Installation fuer Ubuntu 24.04")
+    ui.info("Der Installer verbindet sich per SSH mit dem Kundensystem und fuehrt alle Schritte dort aus.")
+
+    ui.section("Zielsystem", "1")
 
     host = ask_text("SSH-Host/IP")
     ssh_user = ask_text("SSH-Benutzer", "root")
@@ -91,7 +94,7 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
     )
     use_sudo = ask_bool("Soll sudo verwendet werden?", True)
 
-    print("\nInstallationsparameter")
+    ui.section("Installationsparameter", "2")
     odoo_version = ask_text("Odoo-Version", "19.0")
     install_dir = ask_text("Installationspfad", "/opt/odoo")
     data_dir = ask_text("Odoo data_dir", f"{install_dir.rstrip('/')}/data")
@@ -100,20 +103,20 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
     http_port = ask_int("HTTP-Port", 8069)
     longpolling_port = ask_int("Longpolling-Port", 8072)
 
-    print("\nDatenbank")
+    ui.section("Datenbank", "3")
     db_name = ask_text("PostgreSQL Datenbankname", "odoo")
     db_user = ask_text("PostgreSQL Benutzername", "odoo")
     db_password = ask_secret("PostgreSQL Passwort (leer = automatisch generieren)", allow_empty=True)
     if not db_password:
         db_password = generate_secret()
-        print("PostgreSQL Passwort wurde automatisch generiert.")
+        ui.success("PostgreSQL Passwort wurde automatisch generiert.")
 
     admin_password = ask_secret("Odoo Master/Admin-Passwort (leer = automatisch generieren)", allow_empty=True)
     if not admin_password:
         admin_password = generate_secret()
-        print("Odoo Admin-Passwort wurde automatisch generiert.")
+        ui.success("Odoo Admin-Passwort wurde automatisch generiert.")
 
-    print("\nWeb/SSL")
+    ui.section("Web/SSL", "4")
     domain = _normalize_empty(ask_text("Domain (optional, z.B. odoo.example.de)", "", required=False))
     enable_nginx = ask_bool("Nginx als Reverse-Proxy konfigurieren?", bool(domain))
     enable_certbot = False
@@ -121,6 +124,16 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         enable_certbot = ask_bool("Let's Encrypt via Certbot aktivieren?", True)
     enable_ufw = ask_bool("UFW Basisregeln setzen?", False)
 
+    ui.section("AHD Support-Zugriff", "5")
+    ui.info("Optional wird ein SSH-Key-basierter Support-Benutzer fuer Termius/Termux/Terminal-Zugriff angelegt.")
+    enable_support_ssh = ask_bool("Support-SSH-Zugang fuer AHD einrichten?", False)
+    support_ssh_user = "ahd-support"
+    support_ssh_public_key = ""
+    if enable_support_ssh:
+        support_ssh_user = ask_text("Support-SSH-Benutzer", support_ssh_user)
+        support_ssh_public_key = ask_text("SSH Public Key fuer authorized_keys")
+
+    ui.section("Ausfuehrung", "6")
     dry_run = ask_bool("Dry-Run (nur anzeigen, nichts aendern)?", default_dry_run)
 
     return InstallerConfig(
@@ -144,6 +157,9 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         enable_nginx=enable_nginx,
         enable_certbot=enable_certbot,
         enable_ufw=enable_ufw,
+        enable_support_ssh=enable_support_ssh,
+        support_ssh_user=support_ssh_user,
+        support_ssh_public_key=support_ssh_public_key,
         http_port=http_port,
         longpolling_port=longpolling_port,
         dry_run=dry_run,

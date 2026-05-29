@@ -8,6 +8,7 @@ NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 VERSION_RE = re.compile(r"^\d+\.\d+$")
 DOMAIN_RE = re.compile(r"^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}$")
 HOST_KEY_MODES = {"strict", "accept-new", "insecure"}
+SSH_KEY_RE = re.compile(r"^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521))\s+\S+(?:\s+.*)?$")
 
 
 @dataclass(slots=True)
@@ -32,6 +33,9 @@ class InstallerConfig:
     enable_nginx: bool = False
     enable_certbot: bool = False
     enable_ufw: bool = False
+    enable_support_ssh: bool = False
+    support_ssh_user: str = "ahd-support"
+    support_ssh_public_key: str = ""
     http_port: int = 8069
     longpolling_port: int = 8072
     dry_run: bool = False
@@ -72,6 +76,13 @@ class InstallerConfig:
             errors.append("Certbot benoetigt eine Domain.")
         if self.domain and not DOMAIN_RE.match(self.domain):
             errors.append("Die Domain ist formal ungueltig.")
+        if self.enable_support_ssh:
+            if not NAME_RE.match(self.support_ssh_user):
+                errors.append("Support-SSH-Benutzer enthaelt ungueltige Zeichen.")
+            if not self.support_ssh_public_key.strip():
+                errors.append("Support-SSH benoetigt einen SSH Public Key.")
+            elif not SSH_KEY_RE.match(self.support_ssh_public_key.strip()):
+                errors.append("Support-SSH Public Key ist formal ungueltig.")
         if not self.db_password:
             errors.append("Datenbankpasswort darf nicht leer sein.")
         if not self.admin_password:
