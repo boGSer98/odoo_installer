@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Odoo-Konfiguration schreibt jetzt auch den Core-Addon-Pfad `<install_dir>/src/odoo/odoo/addons`, damit `base` bei der Erstinitialisierung gefunden wird; bei Init-Fehlern werden die letzten Odoo-Logzeilen ausgegeben.
+- Odoo-Datenbankinitialisierung nutzt jetzt ein mehrzeiliges Shell-Skript ohne `||`-Kurzschlussoperatoren und gibt bei Fehlern Vorabdiagnosen sowie die letzten 120 Odoo-Logzeilen aus.
+- Odoo-Konfiguration schreibt jetzt auch den Core-Addon-Pfad `<install_dir>/src/odoo/odoo/addons`, damit `base` bei der Erstinitialisierung gefunden wird.
 - Leere Odoo-Datenbanken werden vor dem ersten Service-Start automatisch mit dem Basismodul initialisiert, um HTTP-500-Fehler durch uninitialisierte Datenbanken zu vermeiden.
 - Lokalen Ausfuehrungsmodus (`--local`) hinzugefuegt, damit der Installer direkt auf dem Kundensystem ohne zusaetzliche SSH-Verbindung laufen kann.
 - AHD Support-Key-Erzeugung auf RSA Private Key im PEM-Format umgestellt.

@@ -28,7 +28,10 @@ class OdooDatabaseInitTests(unittest.TestCase):
         self.assertIn("--without-demo=all", rendered)
         self.assertIn("--stop-after-init", rendered)
         self.assertIn("cd /opt/odoo/src/odoo", rendered)
-        self.assertIn("tail -n 80 /opt/odoo/logs/odoo.log", rendered)
+        self.assertIn("tail -n 120 /opt/odoo/logs/odoo.log", rendered)
+        init_command = next(command for command in service_step.commands if "-i base" in command)
+        self.assertNotIn(" || ", init_command)
+        self.assertIn("Odoo-Basismodul nicht gefunden", init_command)
 
         init_index = next(i for i, command in enumerate(service_step.commands) if "-i base" in command)
         restart_index = next(i for i, command in enumerate(service_step.commands) if "systemctl restart" in command)
