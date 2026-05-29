@@ -10,7 +10,7 @@ Linux-Setup Schritt fuer Schritt: `docs/Installationsanleitung_Linux.md`
 
 ## Aktueller Funktionsumfang
 
-- Interaktive Konfigurationsabfragen fuer SSH, Odoo, PostgreSQL, Nginx, TLS und Firewall
+- Interaktive, gegliederte Terminal-UI fuer SSH, Odoo, PostgreSQL, Nginx, TLS, Firewall und Support-Zugriff
 - Validierung der Eingaben vor dem Start
 - Preflight fuer Ubuntu-Version, SSH-Konnektivitaet, RAM, Disk und Port-Hinweise
 - Idempotente Grundinstallation von Odoo aus dem offiziellen Git-Repository
@@ -20,7 +20,8 @@ Linux-Setup Schritt fuer Schritt: `docs/Installationsanleitung_Linux.md`
 - Optionaler Rollback-Modus bei Fehlschlag (`--rollback-on-fail`)
 - Remote Backup/Restore ueber `odoo-bin db dump/load`
 - SSH-Login via Key/Agent **oder** Linux-Passwort (`--ask-ssh-password`)
-- Statusleiste im Terminal mit aktuellem Installationsfortschritt
+- Statusleiste im Terminal mit aktuellem Installationsfortschritt und klaren Schritt-/Kommando-Hinweisen
+- Optionaler AHD Support-SSH-Zugang: legt einen Key-basierten Admin-Benutzer fuer Termius/Termux/Terminal-Zugriff an
 
 ## Voraussetzungen lokal
 
@@ -94,6 +95,7 @@ odoo-installer --config run-config.json --restore /opt/odoo/backups/odoo_2026052
 
 - Das Tool erwartet fuer automatisierte Laeufe `sudo` ohne interaktive Passwortabfrage oder einen root-Login.
 - Zugangsdaten werden nicht in Git gespeichert. Optional gespeicherte JSON-Konfigurationen sollten sicher abgelegt werden.
+- Der optionale AHD Support-Zugang arbeitet per SSH Public Key, sperrt Passwort-Login fuer den Support-Benutzer und validiert die sudoers-Datei mit `visudo`.
 - `wkhtmltopdf` wird aktuell ueber Ubuntu-Pakete installiert. Fuer produktive PDF-Layouts kann eine gezielte Versionierung erforderlich sein.
 - Rollback ist bewusst konservativ und deckt nur unterstuetzte Schritte ab (best effort, kein vollstaendiges System-Undo).
 

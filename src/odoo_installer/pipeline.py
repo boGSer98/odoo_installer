@@ -7,6 +7,7 @@ import sys
 from .models import InstallerConfig
 from .state import ProgressState
 from .ssh import SSHExecutor
+from .ui import ui
 
 
 @dataclass(slots=True)
@@ -79,6 +80,20 @@ def _write_file_command(path: str, content: str, use_sudo: bool) -> str:
     if use_sudo:
         return f"cat <<'EOF' | sudo tee {quoted_path} >/dev/null\n{content}\nEOF"
     return f"cat <<'EOF' > {quoted_path}\n{content}\nEOF"
+
+
+def _write_owned_file_command(path: str, content: str, owner: str, mode: str, use_sudo: bool) -> str:
+    write_command = _write_file_command(path, content, use_sudo)
+    quoted_path = shlex.quote(path)
+    quoted_owner = shlex.quote(owner)
+    quoted_mode = shlex.quote(mode)
+    return "set -e\n" + "\n".join(
+        [
+            write_command,
+            _sudo(f"chown {quoted_owner}:{quoted_owner} {quoted_path}", use_sudo),
+            _sudo(f"chmod {quoted_mode} {quoted_path}", use_sudo),
+        ]
+    )
 
 
 def _sql_literal(value: str) -> str:
@@ -355,14 +370,62 @@ WantedBy=multi-user.target
 
     steps = [
         Step(name="System vorbereiten", commands=commands_install),
-        Step(name="PostgreSQL einrichten", commands=commands_postgres),
-        Step(name="Odoo Quellcode und Python Umgebung", commands=commands_odoo),
-        Step(
-            name="Odoo konfigurieren und Service starten",
-            commands=commands_service,
-            rollback_commands=commands_service_rollback,
-        ),
     ]
+
+    if config.enable_support_ssh:
+        support_user = shlex.quote(config.support_ssh_user)
+        support_home = f"/home/{config.support_ssh_user}"
+        authorized_keys = f"{support_home}/.ssh/authorized_keys"
+        sudoers_path = f"/etc/sudoers.d/90-{config.support_ssh_user}"
+        sudoers_content = f"{config.support_ssh_user} ALL=(ALL) NOPASSWD:ALL"
+        ssh_commands = [
+            _sudo("DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server", config.use_sudo),
+            _sudo("systemctl enable --now ssh", config.use_sudo),
+            _sudo(
+                f"id -u {support_user} >/dev/null 2>&1 || "
+                f"useradd --create-home --shell /bin/bash {support_user}",
+                config.use_sudo,
+            ),
+            _sudo(f"passwd -l {support_user} || true", config.use_sudo),
+            _sudo(f"usermod -aG sudo {support_user}", config.use_sudo),
+            _sudo(
+                f"install -d -m 700 -o {support_user} -g {support_user} {shlex.quote(support_home)}/.ssh",
+                config.use_sudo,
+            ),
+            _write_owned_file_command(
+                authorized_keys,
+                config.support_ssh_public_key.strip(),
+                config.support_ssh_user,
+                "600",
+                config.use_sudo,
+            ),
+            _write_file_command(sudoers_path, sudoers_content, config.use_sudo),
+            _sudo(f"chmod 440 {shlex.quote(sudoers_path)}", config.use_sudo),
+            _sudo(f"visudo -cf {shlex.quote(sudoers_path)}", config.use_sudo),
+        ]
+        ssh_rollback = [
+            _sudo(f"rm -f {shlex.quote(sudoers_path)}", config.use_sudo),
+            _sudo(f"userdel -r {support_user} || true", config.use_sudo),
+        ]
+        steps.append(
+            Step(
+                name="AHD Support-SSH einrichten",
+                commands=ssh_commands,
+                rollback_commands=ssh_rollback,
+            )
+        )
+
+    steps.extend(
+        [
+            Step(name="PostgreSQL einrichten", commands=commands_postgres),
+            Step(name="Odoo Quellcode und Python Umgebung", commands=commands_odoo),
+            Step(
+                name="Odoo konfigurieren und Service starten",
+                commands=commands_service,
+                rollback_commands=commands_service_rollback,
+            ),
+        ]
+    )
 
     if config.enable_nginx:
         domain = config.domain or "_"
@@ -430,6 +493,7 @@ server {{
     if config.enable_ufw:
         ufw_commands = [
             _sudo("DEBIAN_FRONTEND=noninteractive apt-get install -y ufw", config.use_sudo),
+            _sudo(f"ufw allow {config.ssh_port}/tcp", config.use_sudo),
             _sudo("ufw allow OpenSSH", config.use_sudo),
             _sudo("ufw allow 80/tcp", config.use_sudo),
             _sudo("ufw allow 443/tcp", config.use_sudo),
@@ -449,7 +513,7 @@ def run_installation(
 ) -> None:
     warnings = run_preflight(executor, config)
     if warnings:
-        print("Preflight-Warnungen:")
+        ui.warning("Preflight-Warnungen:")
         for warning in warnings:
             print(f"- {warning}")
 
@@ -459,20 +523,23 @@ def run_installation(
     completed_commands = 0
     touched_steps: set[int] = set()
 
+    ui.section("Installation starten", "🚀")
+    ui.info(f"{len(steps)} Schritte, {total_commands} Kommandos")
     status_bar.render(completed_commands, "Start")
 
     for step_index, step in enumerate(steps):
         status_bar.pause()
-        print(f"\n==> {step.name}")
+        ui.section(step.name, f"{step_index + 1}")
         status_bar.render(completed_commands, step.name)
         for command_index, command in enumerate(step.commands):
             if progress and progress.should_skip(step_index, command_index):
                 completed_commands += 1
-                print(f"[RESUME] Uebersprungen: Schritt {step_index + 1}, Kommando {command_index + 1}")
+                ui.info(f"Resume: Schritt {step_index + 1}, Kommando {command_index + 1} uebersprungen")
                 status_bar.render(completed_commands, step.name, note="resume")
                 continue
 
             touched_steps.add(step_index)
+            ui.command_status(step.name, command_index + 1, len(step.commands))
             result = executor.run(command)
             status_bar.pause()
             _print_result(result.stdout, result.stderr)
