@@ -21,7 +21,8 @@ Linux-Setup Schritt fuer Schritt: `docs/Installationsanleitung_Linux.md`
 - Remote Backup/Restore ueber `odoo-bin db dump/load`
 - SSH-Login via Key/Agent **oder** Linux-Passwort (`--ask-ssh-password`)
 - Statusleiste im Terminal mit aktuellem Installationsfortschritt und klaren Schritt-/Kommando-Hinweisen
-- Optionaler AHD Support-SSH-Zugang: erzeugt lokal einen SSH-Key, zeigt den Private Key zum Kopieren an und legt den Benutzer `itservice-ahd-support` mit vollem Namen `IT-Service AHD` an
+- Lokaler Ausfuehrungsmodus (`--local`) fuer Installationen, bei denen der Installer bereits direkt auf dem Kundensystem gestartet wird
+- Optionaler AHD Support-SSH-Zugang: erzeugt lokal einen RSA-PEM-SSH-Key, zeigt den Private Key zum Kopieren an und legt den Benutzer `itservice-ahd-support` mit vollem Namen `IT-Service AHD` an
 
 ## Voraussetzungen lokal
 
@@ -73,6 +74,12 @@ odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode a
 
 Hinweis: `--ssh-host-key-mode insecure` deaktiviert die Host-Key-Pruefung (nur fuer Testumgebungen).
 
+Lokale Installation ohne zusaetzliche SSH-Verbindung, wenn du bereits auf dem Kundensystem bist:
+
+```powershell
+odoo-installer --config run-config.json --local --yes
+```
+
 Backup erstellen (auf dem Remote-Server):
 
 ```powershell
@@ -95,7 +102,7 @@ odoo-installer --config run-config.json --restore /opt/odoo/backups/odoo_2026052
 
 - Das Tool erwartet fuer automatisierte Laeufe `sudo` ohne interaktive Passwortabfrage oder einen root-Login.
 - Zugangsdaten werden nicht in Git gespeichert. Optional gespeicherte JSON-Konfigurationen sollten sicher abgelegt werden.
-- Der optionale AHD Support-Zugang erzeugt den Private Key lokal unter `~/.odoo-installer/support-keys/`, zeigt ihn einmal zum Kopieren in Termius/Termux an, schreibt nur den Public Key auf das Kundensystem, sperrt Passwort-Login fuer den Support-Benutzer und validiert die sudoers-Datei mit `visudo`.
+- Der optionale AHD Support-Zugang erzeugt den Private Key lokal unter `~/.odoo-installer/support-keys/` im PEM-Format, zeigt ihn einmal zum Kopieren in Termius/Termux an, schreibt nur den Public Key auf das Kundensystem, sperrt Passwort-Login fuer den Support-Benutzer und validiert die sudoers-Datei mit `visudo`.
 - `wkhtmltopdf` wird aktuell ueber Ubuntu-Pakete installiert. Fuer produktive PDF-Layouts kann eine gezielte Versionierung erforderlich sein.
 - Rollback ist bewusst konservativ und deckt nur unterstuetzte Schritte ab (best effort, kein vollstaendiges System-Undo).
 

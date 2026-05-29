@@ -28,8 +28,9 @@ class SupportSSHTests(unittest.TestCase):
 
             self.assertTrue(generated.private_key_path.exists())
             self.assertTrue(generated.public_key_path.exists())
-            self.assertIn("BEGIN OPENSSH PRIVATE KEY", generated.private_key)
-            self.assertTrue(generated.public_key.startswith("ssh-ed25519 "))
+            self.assertIn("BEGIN RSA PRIVATE KEY", generated.private_key)
+            self.assertTrue(generated.private_key_path.name.endswith("_rsa.pem"))
+            self.assertTrue(generated.public_key.startswith("ssh-rsa "))
             self.assertIn("itservice-ahd-support@example.org", generated.public_key)
 
     def test_support_ssh_step_sets_up_key_based_admin_user(self) -> None:

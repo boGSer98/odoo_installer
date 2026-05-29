@@ -24,11 +24,11 @@ def _safe_filename(value: str) -> str:
 
 def default_key_path(host: str, user: str, base_dir: Path | None = None) -> Path:
     root = base_dir or Path.home() / ".odoo-installer" / "support-keys"
-    return root / f"{_safe_filename(host)}_{_safe_filename(user)}_ed25519"
+    return root / f"{_safe_filename(host)}_{_safe_filename(user)}_rsa.pem"
 
 
 def generate_support_key(host: str, user: str, *, base_dir: Path | None = None, overwrite: bool = False) -> GeneratedSupportKey:
-    """Generate or reuse an ed25519 key pair for the AHD support account.
+    """Generate or reuse an RSA key pair in PEM format for the AHD support account.
 
     The private key stays on the installer's local machine. Only the public key
     is written to the customer's server as authorized_keys content.
@@ -47,7 +47,11 @@ def generate_support_key(host: str, user: str, *, base_dir: Path | None = None, 
             [
                 "ssh-keygen",
                 "-t",
-                "ed25519",
+                "rsa",
+                "-b",
+                "4096",
+                "-m",
+                "PEM",
                 "-f",
                 str(private_key_path),
                 "-N",

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Lokalen Ausfuehrungsmodus (`--local`) hinzugefuegt, damit der Installer direkt auf dem Kundensystem ohne zusaetzliche SSH-Verbindung laufen kann.
+- AHD Support-Key-Erzeugung auf RSA Private Key im PEM-Format umgestellt.
 - Installationsanleitung und Anwenderanleitung um den automatisch erzeugten AHD Support-SSH-Key, den Benutzer `itservice-ahd-support` und den vollstaendigen Namen `IT-Service AHD` ergaenzt.
 
 ## 0.1.6 - 2026-05-24

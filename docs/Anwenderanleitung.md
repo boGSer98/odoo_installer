@@ -29,6 +29,7 @@ Waehrend der Installation zeigt das Tool eine Statusleiste mit Fortschritt in Pr
 Das Tool fragt folgende Bereiche gefuehrt ab:
 
 - SSH-Verbindung (Host, Benutzer, Port, Key)
+- Ausfuehrungsmodus: lokal auf diesem System oder remote per SSH
 - SSH-Passwort (optional, falls kein Key/Agent genutzt wird)
 - Odoo-Parameter (Version, Pfade, Service)
 - PostgreSQL-Parameter (DB, Benutzer, Passwort)
@@ -37,6 +38,16 @@ Das Tool fragt folgende Bereiche gefuehrt ab:
 - AHD Support-Zugriff mit automatisch erzeugtem SSH-Key
 
 ## SSH-Authentifizierung
+
+Wenn der Installer bereits direkt auf dem Kundensystem gestartet wird, ist der lokale Modus empfohlen. Dabei wird in Punkt **1 Zielsystem** keine SSH-Verbindung aufgebaut; die Installation laeuft direkt auf dem aktuellen System.
+
+Lokaler Modus mit gespeicherter Konfiguration:
+
+```bash
+odoo-installer --config run-config.json --local --yes
+```
+
+Remote-Modus per SSH:
 
 Key/Agent (Standard):
 
@@ -66,12 +77,13 @@ odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode a
 
 Im interaktiven Schritt **5 AHD Support-Zugriff** kann ein dedizierter Support-Benutzer fuer IT-Service AHD eingerichtet werden.
 
-Bei Aktivierung erzeugt der Installer lokal automatisch ein eigenes `ed25519`-SSH-Key-Paar und nutzt den Public Key fuer den Support-Benutzer auf dem Zielserver.
+Bei Aktivierung erzeugt der Installer lokal automatisch ein eigenes RSA-4096-SSH-Key-Paar. Der Private Key wird im PEM-Format ausgegeben, damit Clients, die PEM verlangen, den Key direkt importieren koennen. Der Public Key wird fuer den Support-Benutzer auf dem Zielserver genutzt.
 
 Standardwerte:
 
 - Benutzer: `itservice-ahd-support`
 - Vollstaendiger Name: `IT-Service AHD`
+- Private-Key-Format: PEM (`-----BEGIN RSA PRIVATE KEY-----`)
 - lokaler Key-Ordner: `~/.odoo-installer/support-keys/`
 
 Der Ablauf:
@@ -94,7 +106,7 @@ Sicherheitshinweise:
 Verbindung nach der Installation:
 
 ```bash
-ssh -i ~/.odoo-installer/support-keys/<host>_itservice-ahd-support_ed25519 itservice-ahd-support@<host>
+ssh -i ~/.odoo-installer/support-keys/<host>_itservice-ahd-support_rsa.pem itservice-ahd-support@<host>
 ```
 
 Der exakte lokale Key-Pfad wird waehrend der Installation im Terminal angezeigt.

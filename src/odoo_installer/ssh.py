@@ -28,6 +28,7 @@ class SSHExecutor:
         ssh_key_path: str | None = None,
         ssh_password: str | None = None,
         host_key_mode: str = "accept-new",
+        execution_mode: str = "ssh",
         dry_run: bool = False,
         connect_timeout: int = 12,
     ) -> None:
@@ -37,6 +38,7 @@ class SSHExecutor:
         self.ssh_key_path = ssh_key_path
         self.ssh_password = ssh_password
         self.host_key_mode = host_key_mode
+        self.execution_mode = execution_mode
         self.dry_run = dry_run
         self.connect_timeout = connect_timeout
         self._paramiko_client: Any | None = None
@@ -134,6 +136,19 @@ class SSHExecutor:
             )
 
     def run(self, remote_command: str) -> CommandResult:
+        if self.execution_mode == "local":
+            command = ["bash", "-lc", remote_command]
+            if self.dry_run:
+                rendered = " ".join(shlex.quote(part) for part in command)
+                return CommandResult(command=command, returncode=0, stdout=f"[DRY-RUN-LOCAL] {rendered}\n", stderr="")
+            proc = subprocess.run(command, capture_output=True, text=True)
+            return CommandResult(
+                command=command,
+                returncode=proc.returncode,
+                stdout=proc.stdout,
+                stderr=proc.stderr,
+            )
+
         wrapped = f"bash -lc {shlex.quote(remote_command)}"
         command = [*self._build_ssh_base(), wrapped]
         if self.dry_run:

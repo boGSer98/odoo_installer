@@ -44,6 +44,7 @@ odoo-installer --save-config run-config.json
 
 Hinweise:
 
+- Wenn du bereits per SSH auf dem Kundensystem angemeldet bist, waehle in Punkt **1 Zielsystem** den lokalen Modus. Dann baut der Installer keine weitere SSH-Verbindung auf und fuehrt die Kommandos direkt auf diesem System aus.
 - `ssh_password` wird absichtlich **nicht** in `run-config.json` gespeichert.
 - Der Private Key fuer den optionalen AHD Support-Zugriff wird ebenfalls **nicht** in `run-config.json` gespeichert.
 - Fuer Linux-Passwort-Login das Passwort beim Start per `--ask-ssh-password` eingeben.
@@ -56,7 +57,8 @@ Standardwerte:
 
 - Benutzer auf dem Zielsystem: `itservice-ahd-support`
 - Vollstaendiger Name/Kommentar: `IT-Service AHD`
-- Key-Typ: `ed25519`
+- Key-Typ: RSA 4096 Bit
+- Private-Key-Format in der Terminalausgabe: PEM (`-----BEGIN RSA PRIVATE KEY-----`)
 - lokaler Speicherort: `~/.odoo-installer/support-keys/`
 
 Der Installer zeigt den erzeugten **Private Key** direkt im Terminal an. Kopiere diesen Key in deinen SSH-Client, z. B. Termius oder Termux. Auf dem Kundensystem wird nur der Public Key als `authorized_keys` fuer den Benutzer `itservice-ahd-support` hinterlegt.
@@ -70,21 +72,30 @@ Wichtig:
 ## 5. Ersttest als Dry-Run
 
 ```bash
-odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode accept-new --dry-run --yes
+odoo-installer --config run-config.json --local --dry-run --yes
 ```
 
 Damit siehst du alle geplanten Kommandos ohne Aenderungen auf dem Zielsystem.
+
+Wenn du bewusst ein anderes Zielsystem per SSH installieren willst, verwende statt `--local` weiterhin z. B.:
+
+```bash
+odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode accept-new --dry-run --yes
+```
 
 Wenn der AHD Support-Zugriff aktiviert ist, zeigt der Dry-Run auch die geplanten Schritte fuer den Benutzer `itservice-ahd-support`, `authorized_keys`, Passwortsperre und sudoers-Konfiguration an.
 
 ## 6. Produktiver Installationslauf
 
 ```bash
-odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode accept-new --yes
+odoo-installer --config run-config.json --local --yes
 ```
+
+Im lokalen Modus wird keine SSH-Verbindung aufgebaut. Das ist der empfohlene Modus, wenn du den Installer direkt auf dem Kundensystem startest.
 
 Empfohlen:
 
+- `--local`, wenn du bereits per SSH auf dem Kundensystem bist
 - `--ssh-host-key-mode accept-new` fuer den ersten Kontakt mit neuen Hosts
 - `--ssh-host-key-mode strict` fuer strengere Produktivumgebungen
 
