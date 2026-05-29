@@ -194,7 +194,7 @@ Optionen:
 - `systemd`-Service unter `/etc/systemd/system/<service_name>.service`
 - optionaler Support-Benutzer `itservice-ahd-support` mit Public-Key-Zugriff und gesperrtem Passwort-Login
 
-Vor dem ersten Start initialisiert der Installer die konfigurierte Odoo-Datenbank automatisch mit dem Basismodul (`-i base --without-demo=all --stop-after-init`), falls die Datenbank noch keine Odoo-Tabellen enthaelt. Dadurch ist die Weboberflaeche nach erfolgreicher Installation direkt unter dem konfigurierten HTTP-Port erreichbar.
+Vor dem ersten Start initialisiert der Installer die konfigurierte Odoo-Datenbank automatisch mit dem Basismodul (`-i base --without-demo=all --stop-after-init`), falls die Datenbank noch keine Odoo-Tabellen enthaelt. Die erzeugte Odoo-Konfiguration enthaelt dabei sowohl den Core-Addon-Pfad `<install_dir>/src/odoo/odoo/addons` als auch `<install_dir>/src/odoo/addons` und `<install_dir>/custom-addons`, damit das Basismodul gefunden wird. Dadurch ist die Weboberflaeche nach erfolgreicher Installation direkt unter dem konfigurierten HTTP-Port erreichbar.
 
 ## Fehlerbehandlung
 
