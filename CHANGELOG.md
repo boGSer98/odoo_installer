@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Unreleased
+
+- Installationsanleitung und Anwenderanleitung um den automatisch erzeugten AHD Support-SSH-Key, den Benutzer `itservice-ahd-support` und den vollstaendigen Namen `IT-Service AHD` ergaenzt.
+
 ## 0.1.6 - 2026-05-24
 
 - Terminal-Statusleiste fuer den Installationsfortschritt hinzugefuegt (Prozent + `x/y` Kommandos).

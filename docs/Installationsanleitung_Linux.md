@@ -45,7 +45,27 @@ odoo-installer --save-config run-config.json
 Hinweise:
 
 - `ssh_password` wird absichtlich **nicht** in `run-config.json` gespeichert.
+- Der Private Key fuer den optionalen AHD Support-Zugriff wird ebenfalls **nicht** in `run-config.json` gespeichert.
 - Fuer Linux-Passwort-Login das Passwort beim Start per `--ask-ssh-password` eingeben.
+
+### AHD Support-Zugriff in Schritt 5
+
+Wenn du den Punkt **5 AHD Support-Zugriff** im interaktiven Installer aktivierst, erzeugt der Installer automatisch einen eigenen lokalen SSH-Key fuer den Support-Zugang.
+
+Standardwerte:
+
+- Benutzer auf dem Zielsystem: `itservice-ahd-support`
+- Vollstaendiger Name/Kommentar: `IT-Service AHD`
+- Key-Typ: `ed25519`
+- lokaler Speicherort: `~/.odoo-installer/support-keys/`
+
+Der Installer zeigt den erzeugten **Private Key** direkt im Terminal an. Kopiere diesen Key in deinen SSH-Client, z. B. Termius oder Termux. Auf dem Kundensystem wird nur der Public Key als `authorized_keys` fuer den Benutzer `itservice-ahd-support` hinterlegt.
+
+Wichtig:
+
+- Den Private Key nur sicher speichern und nicht an Kunden oder in Git weitergeben.
+- Der Passwort-Login fuer `itservice-ahd-support` wird gesperrt.
+- Der Benutzer erhaelt sudo-Zugriff ohne Passwort; die sudoers-Datei wird mit `visudo` validiert.
 
 ## 5. Ersttest als Dry-Run
 
@@ -54,6 +74,8 @@ odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode a
 ```
 
 Damit siehst du alle geplanten Kommandos ohne Aenderungen auf dem Zielsystem.
+
+Wenn der AHD Support-Zugriff aktiviert ist, zeigt der Dry-Run auch die geplanten Schritte fuer den Benutzer `itservice-ahd-support`, `authorized_keys`, Passwortsperre und sudoers-Konfiguration an.
 
 ## 6. Produktiver Installationslauf
 
