@@ -115,7 +115,37 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
     http_port = ask_int("HTTP-Port", 8069)
     longpolling_port = ask_int("Longpolling-Port", 8072)
 
-    ui.section("Datenbank", "3")
+    ui.section("Custom-Addons", "3")
+    custom_addons_enabled = ask_bool("Custom-Addons-Verzeichnis vorbereiten und in addons_path aufnehmen?", True)
+    custom_addons_paths: list[str] = []
+    custom_addons_repositories: list[dict[str, str]] = []
+    custom_addons_install_python_requirements = False
+    if custom_addons_enabled:
+        ui.info(f"Standardpfad: {install_dir.rstrip('/')}/custom-addons")
+        extra_paths = ask_text(
+            "Weitere Custom-Addon-Pfade, komma-getrennt (optional)",
+            "",
+            required=False,
+        )
+        custom_addons_paths = [entry.strip() for entry in extra_paths.split(",") if entry.strip()]
+        if ask_bool("Custom-Addon-Git-Repositories konfigurieren?", False):
+            while True:
+                repo_url = ask_text("Repository-URL", required=True)
+                repo_branch = ask_text("Repository-Branch", odoo_version)
+                repo_target = ask_text(
+                    "Zielpfad",
+                    f"{install_dir.rstrip('/')}/custom-addons/{repo_branch.replace('/', '-')}-addons",
+                )
+                custom_addons_repositories.append(
+                    {"url": repo_url, "branch": repo_branch, "target": repo_target}
+                )
+                if not ask_bool("Weiteres Custom-Addon-Repository hinzufuegen?", False):
+                    break
+            custom_addons_install_python_requirements = ask_bool(
+                "requirements.txt aus Custom-Addon-Repositories installieren?", False
+            )
+
+    ui.section("Datenbank", "4")
     db_name = ask_text("PostgreSQL Datenbankname", "odoo")
     db_user = ask_text("PostgreSQL Benutzername", "odoo")
     db_password = ask_secret("PostgreSQL Passwort (leer = automatisch generieren)", allow_empty=True)
@@ -128,7 +158,7 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         admin_password = generate_secret()
         ui.success("Odoo Admin-Passwort wurde automatisch generiert.")
 
-    ui.section("Web/SSL", "4")
+    ui.section("Web/SSL", "5")
     domain = _normalize_empty(ask_text("Domain (optional, z.B. odoo.example.de)", "", required=False))
     enable_nginx = ask_bool("Nginx als Reverse-Proxy konfigurieren?", bool(domain))
     enable_certbot = False
@@ -136,7 +166,7 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         enable_certbot = ask_bool("Let's Encrypt via Certbot aktivieren?", True)
     enable_ufw = ask_bool("UFW Basisregeln setzen?", False)
 
-    ui.section("AHD Support-Zugriff", "5")
+    ui.section("AHD Support-Zugriff", "6")
     ui.info("Optional wird ein SSH-Key-basierter Support-Benutzer fuer Termius/Termux/Terminal-Zugriff angelegt.")
     enable_support_ssh = ask_bool("Support-SSH-Zugang fuer AHD einrichten?", False)
     support_ssh_user = "itservice-ahd-support"
@@ -157,7 +187,7 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         ui.info("Public Key fuer authorized_keys:")
         print(generated_key.public_key)
 
-    ui.section("Ausfuehrung", "6")
+    ui.section("Ausfuehrung", "7")
     dry_run = ask_bool("Dry-Run (nur anzeigen, nichts aendern)?", default_dry_run)
 
     return InstallerConfig(
@@ -187,6 +217,10 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         support_ssh_full_name=support_ssh_full_name,
         support_ssh_public_key=support_ssh_public_key,
         support_ssh_private_key_path=support_ssh_private_key_path,
+        custom_addons_enabled=custom_addons_enabled,
+        custom_addons_paths=custom_addons_paths,
+        custom_addons_repositories=custom_addons_repositories,
+        custom_addons_install_python_requirements=custom_addons_install_python_requirements,
         http_port=http_port,
         longpolling_port=longpolling_port,
         dry_run=dry_run,

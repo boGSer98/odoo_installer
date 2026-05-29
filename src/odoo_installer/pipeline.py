@@ -198,6 +198,8 @@ def build_steps(config: InstallerConfig) -> list[Step]:
     conf_path = f"/etc/{config.service_name}.conf"
     service_path = f"/etc/systemd/system/{config.service_name}.service"
     log_dir = f"{install_dir}/logs"
+    custom_addons_paths = config.effective_custom_addons_paths()
+    addons_path_entries = [f"{src_dir}/odoo/addons", f"{src_dir}/addons", *custom_addons_paths]
 
     packages = [
         "git",
@@ -245,8 +247,8 @@ def build_steps(config: InstallerConfig) -> list[Step]:
         ),
         _sudo(
             f"mkdir -p {shlex.quote(install_dir)} {shlex.quote(log_dir)} "
-            f"{shlex.quote(install_dir)}/custom-addons {shlex.quote(install_dir)}/src "
-            f"{shlex.quote(data_dir)}",
+            f"{shlex.quote(install_dir)}/src {shlex.quote(data_dir)} "
+            + " ".join(shlex.quote(path) for path in custom_addons_paths),
             config.use_sudo,
         ),
         _sudo(
@@ -322,6 +324,43 @@ fi""".format(
         ),
     ]
 
+    custom_addons_commands: list[str] = []
+    if config.custom_addons_enabled:
+        for path in custom_addons_paths:
+            custom_addons_commands.extend(
+                [
+                    _sudo(f"install -d -o {shlex.quote(config.odoo_system_user)} -g {shlex.quote(config.odoo_system_user)} -m 755 {shlex.quote(path)}", config.use_sudo),
+                ]
+            )
+        for repository in config.custom_addons_repositories:
+            repo_url = repository["url"].strip()
+            repo_branch = repository["branch"].strip()
+            repo_target = repository["target"].strip().rstrip("/")
+            sync_command = (
+                f"if [ ! -d {shlex.quote(repo_target)}/.git ]; then "
+                f"git clone --branch {shlex.quote(repo_branch)} {shlex.quote(repo_url)} {shlex.quote(repo_target)}; "
+                "else "
+                f"cd {shlex.quote(repo_target)} && git fetch origin {shlex.quote(repo_branch)} "
+                f"&& git checkout {shlex.quote(repo_branch)} && git pull --ff-only origin {shlex.quote(repo_branch)}; "
+                "fi"
+            )
+            custom_addons_commands.append(_as_user(sync_command, config.odoo_system_user, config.use_sudo))
+            custom_addons_commands.append(
+                _sudo(
+                    f"chown -R {shlex.quote(config.odoo_system_user)}:{shlex.quote(config.odoo_system_user)} {shlex.quote(repo_target)}",
+                    config.use_sudo,
+                )
+            )
+            if config.custom_addons_install_python_requirements:
+                requirements = f"{repo_target}/requirements.txt"
+                custom_addons_commands.append(
+                    _as_user(
+                        f"if [ -f {shlex.quote(requirements)} ]; then {shlex.quote(venv_dir)}/bin/pip install -r {shlex.quote(requirements)}; else echo 'Keine requirements.txt fuer {shlex.quote(repo_target)} gefunden.'; fi",
+                        config.odoo_system_user,
+                        config.use_sudo,
+                    )
+                )
+
     config_file = """[options]
 admin_passwd = {admin_password}
 db_host = False
@@ -329,7 +368,7 @@ db_port = False
 db_user = {db_user}
 db_password = {db_password}
 db_name = {db_name}
-addons_path = {src_dir}/odoo/addons,{src_dir}/addons,{install_dir}/custom-addons
+addons_path = {addons_path}
 logfile = {log_dir}/odoo.log
 data_dir = {data_dir}
 proxy_mode = {proxy_mode}
@@ -340,8 +379,7 @@ longpolling_port = {longpolling_port}
         db_user=config.db_user,
         db_password=config.db_password,
         db_name=config.db_name,
-        src_dir=src_dir,
-        install_dir=install_dir,
+        addons_path=",".join(addons_path_entries),
         log_dir=log_dir,
         data_dir=data_dir,
         proxy_mode="True" if config.enable_nginx else "False",
@@ -486,12 +524,18 @@ fi""".format(
         [
             Step(name="PostgreSQL einrichten", commands=commands_postgres),
             Step(name="Odoo Quellcode und Python Umgebung", commands=commands_odoo),
-            Step(
-                name="Odoo konfigurieren und Service starten",
-                commands=commands_service,
-                rollback_commands=commands_service_rollback,
-            ),
         ]
+    )
+
+    if custom_addons_commands:
+        steps.append(Step(name="Custom-Addons vorbereiten", commands=custom_addons_commands))
+
+    steps.append(
+        Step(
+            name="Odoo konfigurieren und Service starten",
+            commands=commands_service,
+            rollback_commands=commands_service_rollback,
+        )
     )
 
     if config.enable_nginx:
