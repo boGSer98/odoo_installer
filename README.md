@@ -8,6 +8,8 @@ Das Projekt richtet sich an Kundeninstallationen auf Remote-Servern. Die Install
 
 Linux-Setup Schritt fuer Schritt: `docs/Installationsanleitung_Linux.md`
 
+Kompletter Testlauf mit Installation, Custom-Addon-Repositories und restic Backup: `docs/Testlauf_Installation_Addons_Backup.md`
+
 ## Aktueller Funktionsumfang
 
 - Interaktive, gegliederte Terminal-UI fuer SSH, Odoo, PostgreSQL, Nginx, TLS, Firewall und Support-Zugriff
@@ -134,6 +136,13 @@ Restore aus einem Remote-Backup:
 
 ```powershell
 odoo-installer --config run-config.json --restore /opt/odoo/backups/odoo_20260524_130000.zip --yes
+```
+
+Restic-Snapshots anzeigen und Repository pruefen:
+
+```powershell
+odoo-installer --config run-config.json --restic-snapshots --yes
+odoo-installer --config run-config.json --restic-check --restic-read-data-subset 5% --yes
 ```
 
 ## Sicherheitshinweise

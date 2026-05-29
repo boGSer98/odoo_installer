@@ -5,7 +5,7 @@ from dataclasses import asdict
 from getpass import getpass
 import json
 from pathlib import Path
-from .backup_restore import run_backup, run_restore
+from .backup_restore import run_backup, run_restore, run_restic_check, run_restic_snapshots
 from .models import InstallerConfig
 from .pipeline import run_installation
 from .prompts import collect_config
@@ -76,6 +76,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         metavar="REMOTE_BACKUP_PATH",
         help="Remote-Backupdatei in die konfigurierte Odoo-Datenbank einspielen.",
     )
+    operation_group.add_argument("--restic-snapshots", action="store_true", help="Restic-Snapshots des konfigurierten Cloud-Backups anzeigen.")
+    operation_group.add_argument("--restic-check", action="store_true", help="Restic-Repository mit `restic check` pruefen.")
+    parser.add_argument(
+        "--restic-read-data-subset",
+        default="5%",
+        help="Datenanteil fuer `restic check --read-data-subset` (Standard: 5%%).",
+    )
     parser.add_argument("--backup-dir", help="Zielverzeichnis auf dem Server fuer Backups.")
     parser.add_argument("--backup-name", help="Dateiname fuer das Backup (optional, inkl. Endung).")
     parser.add_argument(
@@ -134,8 +141,8 @@ def main(argv: list[str] | None = None) -> int:
             if args.dry_run:
                 config.dry_run = True
         else:
-            if args.backup or args.restore:
-                raise ValueError("Fuer --backup/--restore ist --config erforderlich.")
+            if args.backup or args.restore or args.restic_snapshots or args.restic_check:
+                raise ValueError("Fuer Backup-/Restore-/Restic-Operationen ist --config erforderlich.")
             config = collect_config(default_dry_run=args.dry_run)
 
         if args.ssh_host_key_mode:
@@ -166,6 +173,10 @@ def main(argv: list[str] | None = None) -> int:
             operation_label = "Backup"
         elif args.restore:
             operation_label = "Restore"
+        elif args.restic_snapshots:
+            operation_label = "Restic-Snapshots"
+        elif args.restic_check:
+            operation_label = "Restic-Check"
 
         if not args.yes:
             confirm = input(f"\n{operation_label} starten? (j/n) [j]: ").strip().lower()
@@ -208,6 +219,20 @@ def main(argv: list[str] | None = None) -> int:
                     restart_service=not args.no_restart_after_restore,
                 )
                 ui.success("Restore abgeschlossen.")
+                return 0
+
+            if args.restic_snapshots:
+                run_restic_snapshots(executor=executor, config=config)
+                ui.success("Restic-Snapshots gelesen.")
+                return 0
+
+            if args.restic_check:
+                run_restic_check(
+                    executor=executor,
+                    config=config,
+                    read_data_subset=args.restic_read_data_subset,
+                )
+                ui.success("Restic-Check abgeschlossen.")
                 return 0
 
             progress = None if config.dry_run else ProgressState(args.state_file, config, resume=args.resume)
