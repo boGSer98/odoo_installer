@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Restic Cloud-Backups koennen jetzt ueber `backup_enabled` eingerichtet werden; der Installer installiert `restic`, schreibt `/etc/odoo-backup/env`, erzeugt `/usr/local/sbin/odoo-backup`, legt `/etc/cron.d/odoo-backup` an und wendet daily/weekly/monthly Retention an.
 - Custom-Addons koennen jetzt ueber `custom_addons_paths` und `custom_addons_repositories` eingerichtet werden; der Installer legt Pfade an, synchronisiert Git-Repositories, ergaenzt `addons_path` und kann optional Repository-`requirements.txt` installieren.
 - PostgreSQL-Datenbanken werden mit UTF8-Encoding (`--encoding=UTF8 --locale=C.UTF-8 --template=template0`) angelegt; noch nicht initialisierte SQL_ASCII-Datenbanken werden automatisch neu erstellt, damit Odoo Unicode/JSON-Daten laden kann.
 - Odoo-Datenbankinitialisierung nutzt jetzt ein mehrzeiliges Shell-Skript ohne `||`-Kurzschlussoperatoren und gibt bei Fehlern Vorabdiagnosen sowie die letzten 120 Odoo-Logzeilen aus.

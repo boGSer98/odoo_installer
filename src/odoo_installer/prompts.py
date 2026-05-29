@@ -187,7 +187,32 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         ui.info("Public Key fuer authorized_keys:")
         print(generated_key.public_key)
 
-    ui.section("Ausfuehrung", "7")
+    ui.section("Backups", "7")
+    backup_enabled = ask_bool("Restic Cloud-Backup mit Cronjob einrichten?", False)
+    backup_repository_url = ""
+    backup_password_file = "/etc/odoo-backup/restic-password"
+    backup_schedule = "0 2 * * *"
+    backup_include_filestore = True
+    backup_include_config = True
+    backup_include_custom_addons = True
+    backup_retention_daily = 7
+    backup_retention_weekly = 4
+    backup_retention_monthly = 6
+    if backup_enabled:
+        ui.info("Das Restic-Passwort wird nicht abgefragt und nicht gespeichert. Lege die Passwortdatei separat mit chmod 600 an.")
+        backup_repository_url = ask_text(
+            "Restic Repository-URL (z.B. sftp:user@example.com:/backups/customer-odoo)"
+        )
+        backup_password_file = ask_text("Restic Passwortdatei", backup_password_file)
+        backup_schedule = ask_text("Cron-Zeitplan", backup_schedule)
+        backup_include_filestore = ask_bool("Odoo-Filestore sichern?", True)
+        backup_include_config = ask_bool("/etc/<service>.conf sichern?", True)
+        backup_include_custom_addons = ask_bool("Custom-Addons sichern?", True)
+        backup_retention_daily = int(ask_text("Restic Retention daily", "7"))
+        backup_retention_weekly = int(ask_text("Restic Retention weekly", "4"))
+        backup_retention_monthly = int(ask_text("Restic Retention monthly", "6"))
+
+    ui.section("Ausfuehrung", "8")
     dry_run = ask_bool("Dry-Run (nur anzeigen, nichts aendern)?", default_dry_run)
 
     return InstallerConfig(
@@ -221,6 +246,16 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         custom_addons_paths=custom_addons_paths,
         custom_addons_repositories=custom_addons_repositories,
         custom_addons_install_python_requirements=custom_addons_install_python_requirements,
+        backup_enabled=backup_enabled,
+        backup_repository_url=backup_repository_url,
+        backup_password_file=backup_password_file,
+        backup_schedule=backup_schedule,
+        backup_include_filestore=backup_include_filestore,
+        backup_include_config=backup_include_config,
+        backup_include_custom_addons=backup_include_custom_addons,
+        backup_retention_daily=backup_retention_daily,
+        backup_retention_weekly=backup_retention_weekly,
+        backup_retention_monthly=backup_retention_monthly,
         http_port=http_port,
         longpolling_port=longpolling_port,
         dry_run=dry_run,

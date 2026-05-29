@@ -21,6 +21,7 @@ Linux-Setup Schritt fuer Schritt: `docs/Installationsanleitung_Linux.md`
 - Resume-Funktion mit lokaler State-Datei (`--resume`, `--state-file`)
 - Optionaler Rollback-Modus bei Fehlschlag (`--rollback-on-fail`)
 - Remote Backup/Restore ueber `odoo-bin db dump/load`
+- Optionales restic Cloud-Backup mit Cronjob, Repository-URL (z. B. SFTP), verschluesselter Ablage und Retention
 - SSH-Login via Key/Agent **oder** Linux-Passwort (`--ask-ssh-password`)
 - Statusleiste im Terminal mit aktuellem Installationsfortschritt und klaren Schritt-/Kommando-Hinweisen
 - Lokaler Ausfuehrungsmodus (`--local`) fuer Installationen, bei denen der Installer bereits direkt auf dem Kundensystem gestartet wird
@@ -101,6 +102,22 @@ Custom-Addons koennen in `run-config.json` vorbereitet werden:
 
 Der Standardpfad `<install_dir>/custom-addons` bleibt automatisch aktiv, solange `custom_addons_enabled` nicht auf `false` gesetzt wird.
 
+Restic Cloud-Backups koennen ebenfalls in `run-config.json` vorbereitet werden:
+
+```json
+{
+  "backup_enabled": true,
+  "backup_repository_url": "sftp:backup@example.com:/backups/customer-odoo",
+  "backup_password_file": "/etc/odoo-backup/restic-password",
+  "backup_schedule": "0 2 * * *",
+  "backup_retention_daily": 7,
+  "backup_retention_weekly": 4,
+  "backup_retention_monthly": 6
+}
+```
+
+Das Restic-Passwort wird nicht in der JSON-Konfiguration gespeichert; der Installer erwartet eine separat angelegte Passwortdatei mit sicheren Rechten.
+
 Backup erstellen (auf dem Remote-Server):
 
 ```powershell
@@ -123,6 +140,7 @@ odoo-installer --config run-config.json --restore /opt/odoo/backups/odoo_2026052
 
 - Das Tool erwartet fuer automatisierte Laeufe `sudo` ohne interaktive Passwortabfrage oder einen root-Login.
 - Zugangsdaten werden nicht in Git gespeichert. Optional gespeicherte JSON-Konfigurationen sollten sicher abgelegt werden.
+- Restic-Backups speichern nur den Pfad zur Passwortdatei; das Passwort selbst gehoert nicht in `run-config.json`, Logs oder Git. Die Datei sollte `root:root` gehoeren und `chmod 600` haben.
 - Der optionale AHD Support-Zugang erzeugt den Private Key lokal unter `~/.odoo-installer/support-keys/` im PEM-Format, zeigt ihn einmal zum Kopieren in Termius/Termux an, schreibt nur den Public Key auf das Kundensystem, sperrt Passwort-Login fuer den Support-Benutzer und validiert die sudoers-Datei mit `visudo`.
 - `wkhtmltopdf` wird aktuell ueber Ubuntu-Pakete installiert. Fuer produktive PDF-Layouts kann eine gezielte Versionierung erforderlich sein.
 - Rollback ist bewusst konservativ und deckt nur unterstuetzte Schritte ab (best effort, kein vollstaendiges System-Undo).

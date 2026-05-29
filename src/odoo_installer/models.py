@@ -44,6 +44,16 @@ class InstallerConfig:
     custom_addons_paths: list[str] = field(default_factory=list)
     custom_addons_repositories: list[dict[str, str]] = field(default_factory=list)
     custom_addons_install_python_requirements: bool = False
+    backup_enabled: bool = False
+    backup_repository_url: str = ""
+    backup_password_file: str = "/etc/odoo-backup/restic-password"
+    backup_schedule: str = "0 2 * * *"
+    backup_include_filestore: bool = True
+    backup_include_config: bool = True
+    backup_include_custom_addons: bool = True
+    backup_retention_daily: int = 7
+    backup_retention_weekly: int = 4
+    backup_retention_monthly: int = 6
     http_port: int = 8069
     longpolling_port: int = 8072
     dry_run: bool = False
@@ -130,6 +140,20 @@ class InstallerConfig:
                 errors.append("Support-SSH benoetigt einen SSH Public Key.")
             elif not SSH_KEY_RE.match(self.support_ssh_public_key.strip()):
                 errors.append("Support-SSH Public Key ist formal ungueltig.")
+        if self.backup_enabled:
+            if not self.backup_repository_url.strip():
+                errors.append("Backup-Repository-URL darf nicht leer sein.")
+            if not self.backup_password_file.startswith("/"):
+                errors.append("Backup-Passwortdatei muss ein absoluter Linux-Pfad sein.")
+            if not self.backup_schedule.strip():
+                errors.append("Backup-Zeitplan darf nicht leer sein.")
+            for label, value in (
+                ("daily", self.backup_retention_daily),
+                ("weekly", self.backup_retention_weekly),
+                ("monthly", self.backup_retention_monthly),
+            ):
+                if value < 0:
+                    errors.append(f"Backup-Retention {label} darf nicht negativ sein.")
         if not self.db_password:
             errors.append("Datenbankpasswort darf nicht leer sein.")
         if not self.admin_password:

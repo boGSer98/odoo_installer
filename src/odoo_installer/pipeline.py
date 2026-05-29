@@ -104,6 +104,98 @@ def _sql_identifier(value: str) -> str:
     return '"' + value.replace('"', '""') + '"'
 
 
+def _restic_backup_script(config: InstallerConfig, data_dir: str, conf_path: str, custom_addons_paths: list[str]) -> str:
+    include_paths = [f"/var/lib/odoo-backup/work/{config.db_name}.dump"]
+    if config.backup_include_filestore:
+        include_paths.append(f"{data_dir}/filestore/{config.db_name}")
+    if config.backup_include_config:
+        include_paths.append(conf_path)
+    if config.backup_include_custom_addons:
+        include_paths.extend(custom_addons_paths)
+
+    quoted_includes = " ".join(shlex.quote(path) for path in include_paths)
+    forget_parts = ["restic", "forget", "--prune"]
+    if config.backup_retention_daily:
+        forget_parts.extend(["--keep-daily", str(config.backup_retention_daily)])
+    if config.backup_retention_weekly:
+        forget_parts.extend(["--keep-weekly", str(config.backup_retention_weekly)])
+    if config.backup_retention_monthly:
+        forget_parts.extend(["--keep-monthly", str(config.backup_retention_monthly)])
+    forget_command = (
+        " ".join(shlex.quote(part) for part in forget_parts)
+        if len(forget_parts) > 3
+        else ": # keine Restic-Retention konfiguriert"
+    )
+
+    return """#!/usr/bin/env bash
+set -euo pipefail
+
+ENV_FILE=/etc/odoo-backup/env
+LOCK_FILE=/var/lock/odoo-backup.lock
+WORK_ROOT=/var/lib/odoo-backup/work
+DB_DUMP="$WORK_ROOT/{db_name}.dump"
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo "Backup-Env-Datei fehlt: $ENV_FILE" >&2
+    exit 1
+fi
+
+set -a
+. "$ENV_FILE"
+set +a
+
+if [ ! -f "$RESTIC_PASSWORD_FILE" ]; then
+    echo "Restic-Passwortdatei fehlt: $RESTIC_PASSWORD_FILE" >&2
+    exit 1
+fi
+
+mkdir -p "$WORK_ROOT"
+cleanup() {{
+    rm -f "$DB_DUMP"
+}}
+trap cleanup EXIT
+
+exec 9>"$LOCK_FILE"
+flock -n 9
+mkdir -p "$WORK_ROOT"
+sudo -u postgres pg_dump -Fc -f "$DB_DUMP" {db_name}
+restic snapshots >/dev/null 2>&1 || restic init
+restic backup {include_paths}
+{forget_command}
+""".format(
+        db_name=shlex.quote(config.db_name),
+        include_paths=quoted_includes,
+        forget_command=forget_command,
+    )
+
+
+def _build_restic_backup_commands(config: InstallerConfig, data_dir: str, conf_path: str, custom_addons_paths: list[str]) -> list[str]:
+    env_file = """RESTIC_REPOSITORY={repository}
+RESTIC_PASSWORD_FILE={password_file}
+""".format(
+        repository=config.backup_repository_url.strip(),
+        password_file=config.backup_password_file,
+    )
+    script = _restic_backup_script(config, data_dir, conf_path, custom_addons_paths)
+    cron_file = f"{config.backup_schedule.strip()} root /usr/local/sbin/odoo-backup >> /var/log/odoo-backup.log 2>&1"
+
+    return [
+        _sudo("DEBIAN_FRONTEND=noninteractive apt-get install -y restic", config.use_sudo),
+        _sudo("install -d -m 700 -o root -g root /etc/odoo-backup", config.use_sudo),
+        _sudo("install -d -m 700 -o root -g root /var/lib/odoo-backup/work", config.use_sudo),
+        _write_file_command("/etc/odoo-backup/env", env_file.rstrip(), config.use_sudo),
+        _sudo("chown root:root /etc/odoo-backup/env", config.use_sudo),
+        _sudo("chmod 600 /etc/odoo-backup/env", config.use_sudo),
+        _sudo(f"test -f {shlex.quote(config.backup_password_file)}", config.use_sudo),
+        _write_file_command("/usr/local/sbin/odoo-backup", script.rstrip(), config.use_sudo),
+        _sudo("chown root:root /usr/local/sbin/odoo-backup", config.use_sudo),
+        _sudo("chmod 750 /usr/local/sbin/odoo-backup", config.use_sudo),
+        _write_file_command("/etc/cron.d/odoo-backup", cron_file, config.use_sudo),
+        _sudo("chown root:root /etc/cron.d/odoo-backup", config.use_sudo),
+        _sudo("chmod 644 /etc/cron.d/odoo-backup", config.use_sudo),
+    ]
+
+
 def _print_result(stdout: str, stderr: str) -> None:
     if stdout.strip():
         print(stdout.rstrip())
@@ -537,6 +629,14 @@ fi""".format(
             rollback_commands=commands_service_rollback,
         )
     )
+
+    if config.backup_enabled:
+        steps.append(
+            Step(
+                name="Restic Cloud-Backup einrichten",
+                commands=_build_restic_backup_commands(config, data_dir, conf_path, custom_addons_paths),
+            )
+        )
 
     if config.enable_nginx:
         domain = config.domain or "_"
