@@ -34,6 +34,7 @@ Das Tool fragt folgende Bereiche gefuehrt ab:
 - PostgreSQL-Parameter (DB, Benutzer, Passwort)
 - Weboptionen (Domain, Nginx, Certbot)
 - Sicherheitsoptionen (UFW)
+- AHD Support-Zugriff mit automatisch erzeugtem SSH-Key
 
 ## SSH-Authentifizierung
 
@@ -61,6 +62,43 @@ Beispiel bei `Host key verification failed`:
 odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode accept-new --yes
 ```
 
+## AHD Support-Zugriff
+
+Im interaktiven Schritt **5 AHD Support-Zugriff** kann ein dedizierter Support-Benutzer fuer IT-Service AHD eingerichtet werden.
+
+Bei Aktivierung erzeugt der Installer lokal automatisch ein eigenes `ed25519`-SSH-Key-Paar und nutzt den Public Key fuer den Support-Benutzer auf dem Zielserver.
+
+Standardwerte:
+
+- Benutzer: `itservice-ahd-support`
+- Vollstaendiger Name: `IT-Service AHD`
+- lokaler Key-Ordner: `~/.odoo-installer/support-keys/`
+
+Der Ablauf:
+
+1. Der Installer erzeugt oder verwendet lokal einen passenden SSH-Key unter `~/.odoo-installer/support-keys/`.
+2. Der **Private Key** wird im Terminal angezeigt, damit du ihn kopieren kannst.
+3. Kopiere den Private Key in deinen SSH-Client, z. B. Termius oder Termux.
+4. Auf dem Zielserver legt der Installer den Benutzer `itservice-ahd-support` mit dem vollstaendigen Namen `IT-Service AHD` an.
+5. Der Public Key wird in `/home/itservice-ahd-support/.ssh/authorized_keys` geschrieben.
+6. Der Passwort-Login fuer den Support-Benutzer wird gesperrt.
+7. Der Support-Benutzer erhaelt sudo-Zugriff ohne Passwort; die sudoers-Datei wird mit `visudo` geprueft.
+
+Sicherheitshinweise:
+
+- Der Private Key wird nicht in gespeicherte Konfigurationsdateien geschrieben.
+- In der Konfigurationsuebersicht wird der Public Key maskiert.
+- Auf dem Kundensystem landet nur der Public Key.
+- Den angezeigten Private Key nur in sichere SSH-Clients uebernehmen und nicht in Git, Tickets oder Kundendokumentation speichern.
+
+Verbindung nach der Installation:
+
+```bash
+ssh -i ~/.odoo-installer/support-keys/<host>_itservice-ahd-support_ed25519 itservice-ahd-support@<host>
+```
+
+Der exakte lokale Key-Pfad wird waehrend der Installation im Terminal angezeigt.
+
 ## Dry-Run
 
 ```bash
@@ -77,6 +115,8 @@ odoo-installer --config run-config.json --yes
 ```
 
 Hinweis: Konfigurationsdateien koennen sensible Daten enthalten. Sicher speichern und nicht committen.
+
+Hinweis: `ssh_password` und `support_ssh_private_key_path` werden beim Speichern absichtlich geleert. Der Private Key fuer den AHD Support-Zugriff bleibt lokal unter `~/.odoo-installer/support-keys/`.
 
 ## Resume nach Abbruch
 
@@ -140,6 +180,7 @@ Optionen:
 - Python-Umgebung unter `<install_dir>/venv`
 - Konfigurationsdatei unter `/etc/<service_name>.conf`
 - `systemd`-Service unter `/etc/systemd/system/<service_name>.service`
+- optionaler Support-Benutzer `itservice-ahd-support` mit Public-Key-Zugriff und gesperrtem Passwort-Login
 
 ## Fehlerbehandlung
 
