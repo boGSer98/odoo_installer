@@ -115,7 +115,7 @@ Bei `500 Internal Server Error` nach der Installation zuerst den Odoo-Log pruefe
 sudo tail -n 100 /opt/odoo/logs/odoo.log
 ```
 
-Wenn die Datenbank noch leer bzw. nicht als Odoo-Datenbank initialisiert ist, den aktuellen Installer pullen und erneut lokal starten. Der Installer schreibt dabei auch eine korrigierte `addons_path` inklusive Odoo-Core-Addons (`/opt/odoo/src/odoo/odoo/addons`) und gibt bei Initialisierungsfehlern die letzten Odoo-Logzeilen direkt aus:
+Wenn die Datenbank noch leer bzw. nicht als Odoo-Datenbank initialisiert ist, den aktuellen Installer pullen und erneut lokal starten. Der Installer schreibt dabei auch eine korrigierte `addons_path` inklusive Odoo-Core-Addons (`/opt/odoo/src/odoo/odoo/addons`) und gibt bei Initialisierungsfehlern die letzten Odoo-Logzeilen direkt aus. Meldet der Log `server's encoding SQL_ASCII`, wird eine noch nicht initialisierte Datenbank automatisch mit UTF8 neu angelegt:
 
 ```powershell
 git pull

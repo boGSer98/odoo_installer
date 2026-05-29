@@ -100,6 +100,10 @@ def _sql_literal(value: str) -> str:
     return value.replace("'", "''")
 
 
+def _sql_identifier(value: str) -> str:
+    return '"' + value.replace('"', '""') + '"'
+
+
 def _print_result(stdout: str, stderr: str) -> None:
     if stdout.strip():
         print(stdout.rstrip())
@@ -225,6 +229,7 @@ def build_steps(config: InstallerConfig) -> list[Step]:
     db_user_sql = _sql_literal(config.db_user)
     db_name_sql = _sql_literal(config.db_name)
     db_password_sql = _sql_literal(config.db_password)
+    db_user_sql_identifier = _sql_identifier(config.db_user)
 
     commands_install = [
         _sudo("apt-get update", config.use_sudo),
@@ -251,24 +256,42 @@ def build_steps(config: InstallerConfig) -> list[Step]:
         ),
     ]
 
+    ensure_database_script = """set -u
+if psql -d postgres -tc \"SELECT 1 FROM pg_roles WHERE rolname='{db_user_sql}'\" | grep -q 1; then
+    echo 'PostgreSQL-Rolle {db_user} existiert bereits.'
+else
+    createuser --createdb --no-createrole --no-superuser {db_user}
+fi
+psql -d postgres -c \"ALTER USER {db_user_sql_ident} WITH PASSWORD '{db_password_sql}'\"
+
+if psql -d postgres -tc \"SELECT 1 FROM pg_database WHERE datname='{db_name_sql}'\" | grep -q 1; then
+    db_encoding=$(psql -d postgres -Atc \"SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname='{db_name_sql}'\")
+    echo "PostgreSQL-Datenbank {db_name} existiert mit Encoding $db_encoding."
+    if [ "$db_encoding" != "UTF8" ]; then
+        initialized=$(psql -d {db_name} -Atc \"SELECT to_regclass('public.ir_module_module')\" 2>/dev/null || true)
+        if [ "$initialized" = "ir_module_module" ]; then
+            echo 'FEHLER: Datenbank {db_name} ist bereits als Odoo-Datenbank initialisiert, hat aber kein UTF8-Encoding.' >&2
+            echo 'Bitte manuell mit pg_dump/createdb UTF8/pg_restore migrieren.' >&2
+            exit 1
+        fi
+        echo 'Datenbank {db_name} ist noch nicht initialisiert und hat kein UTF8-Encoding; sie wird neu angelegt.'
+        psql -d postgres -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='{db_name_sql}' AND pid <> pg_backend_pid()\"
+        dropdb {db_name}
+        createdb -O {db_user} --encoding=UTF8 --locale=C.UTF-8 --template=template0 {db_name}
+    fi
+else
+    createdb -O {db_user} --encoding=UTF8 --locale=C.UTF-8 --template=template0 {db_name}
+fi""".format(
+        db_user=db_user,
+        db_name=db_name,
+        db_user_sql=db_user_sql,
+        db_user_sql_ident=db_user_sql_identifier,
+        db_name_sql=db_name_sql,
+        db_password_sql=db_password_sql,
+    )
+
     commands_postgres = [
-        _as_user(
-            f"psql -tc \"SELECT 1 FROM pg_roles WHERE rolname='{db_user_sql}'\" | grep -q 1 || "
-            f"createuser --createdb --no-createrole --no-superuser {db_user}",
-            "postgres",
-            config.use_sudo,
-        ),
-        _as_user(
-            f"psql -c \"ALTER USER {config.db_user} WITH PASSWORD '{db_password_sql}'\"",
-            "postgres",
-            config.use_sudo,
-        ),
-        _as_user(
-            f"psql -tc \"SELECT 1 FROM pg_database WHERE datname='{db_name_sql}'\" | grep -q 1 || "
-            f"createdb -O {db_user} {db_name}",
-            "postgres",
-            config.use_sudo,
-        ),
+        _as_user(ensure_database_script, "postgres", config.use_sudo),
     ]
 
     commands_odoo = [
