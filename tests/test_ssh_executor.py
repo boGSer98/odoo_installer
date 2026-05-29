@@ -31,6 +31,21 @@ class SSHExecutorTests(unittest.TestCase):
         self.assertIn("StrictHostKeyChecking=no", result.stdout)
         self.assertIn("UserKnownHostsFile=", result.stdout)
 
+    def test_local_mode_dry_run_does_not_build_ssh_command(self) -> None:
+        executor = SSHExecutor(
+            host="localhost",
+            user="root",
+            execution_mode="local",
+            dry_run=True,
+        )
+        result = executor.run("echo connected")
+
+        self.assertTrue(result.ok)
+        self.assertIn("[DRY-RUN-LOCAL]", result.stdout)
+        self.assertIn("bash -lc", result.stdout)
+        self.assertNotIn("root@localhost", result.stdout)
+        self.assertNotIn("StrictHostKeyChecking", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

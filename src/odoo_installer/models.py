@@ -9,12 +9,14 @@ VERSION_RE = re.compile(r"^\d+\.\d+$")
 DOMAIN_RE = re.compile(r"^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}$")
 HOST_KEY_MODES = {"strict", "accept-new", "insecure"}
 SSH_KEY_RE = re.compile(r"^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521))\s+\S+(?:\s+.*)?$")
+EXECUTION_MODES = {"local", "ssh"}
 
 
 @dataclass(slots=True)
 class InstallerConfig:
     host: str
     ssh_user: str
+    execution_mode: str = "ssh"
     ssh_port: int = 22
     ssh_key_path: str | None = None
     ssh_password: str = ""
@@ -44,10 +46,13 @@ class InstallerConfig:
 
     def validate(self) -> list[str]:
         errors: list[str] = []
-        if not self.host.strip():
-            errors.append("SSH-Host darf nicht leer sein.")
-        if not self.ssh_user.strip():
-            errors.append("SSH-Benutzer darf nicht leer sein.")
+        if self.execution_mode not in EXECUTION_MODES:
+            errors.append("execution_mode muss 'local' oder 'ssh' sein.")
+        if self.execution_mode == "ssh":
+            if not self.host.strip():
+                errors.append("SSH-Host darf nicht leer sein.")
+            if not self.ssh_user.strip():
+                errors.append("SSH-Benutzer darf nicht leer sein.")
         if not (1 <= self.ssh_port <= 65535):
             errors.append("SSH-Port muss zwischen 1 und 65535 liegen.")
         if self.ssh_host_key_mode not in HOST_KEY_MODES:

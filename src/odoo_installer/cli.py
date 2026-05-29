@@ -53,6 +53,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--save-config", type=Path, help="Optionaler Pfad zum Speichern der Konfiguration.")
     parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, welche Kommandos ausgefuehrt werden.")
     parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Kommandos direkt auf diesem System ausfuehren, ohne SSH-Verbindung aufzubauen.",
+    )
+    parser.add_argument(
         "--ask-ssh-password",
         action="store_true",
         help="SSH-Passwort interaktiv abfragen (nicht in Konfig speichern).",
@@ -134,6 +139,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.ssh_host_key_mode:
             config.ssh_host_key_mode = args.ssh_host_key_mode
 
+        if args.local:
+            config.execution_mode = "local"
+
         if args.ask_ssh_password:
             config.ssh_password = getpass("SSH-Passwort: ").strip()
 
@@ -170,6 +178,7 @@ def main(argv: list[str] | None = None) -> int:
             ssh_key_path=config.ssh_key_path,
             ssh_password=config.ssh_password or None,
             host_key_mode=config.ssh_host_key_mode,
+            execution_mode=config.execution_mode,
             dry_run=config.dry_run,
         )
 

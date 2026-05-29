@@ -46,6 +46,23 @@ class ValidationTests(unittest.TestCase):
         errors = config.validate()
         self.assertIn("ssh_host_key_mode muss 'strict', 'accept-new' oder 'insecure' sein.", errors)
 
+    def test_local_mode_does_not_require_ssh_target(self) -> None:
+        config = InstallerConfig(
+            host="",
+            ssh_user="",
+            execution_mode="local",
+            db_password="secret-db",
+            admin_password="secret-admin",
+        )
+
+        self.assertEqual(config.validate(), [])
+
+    def test_invalid_execution_mode_is_rejected(self) -> None:
+        config = _base_config()
+        config.execution_mode = "invalid"
+
+        self.assertIn("execution_mode muss 'local' oder 'ssh' sein.", config.validate())
+
 
 if __name__ == "__main__":
     unittest.main()

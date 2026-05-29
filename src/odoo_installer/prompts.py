@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from getpass import getpass
+from getpass import getpass, getuser
 import secrets
 
 from .models import InstallerConfig
@@ -79,20 +79,31 @@ def generate_secret() -> str:
 
 def collect_config(default_dry_run: bool = False) -> InstallerConfig:
     ui.banner("AHD Odoo Installer", "Gefuehrte Installation fuer Ubuntu 24.04")
-    ui.info("Der Installer verbindet sich per SSH mit dem Kundensystem und fuehrt alle Schritte dort aus.")
+    ui.info("Der Installer kann direkt auf dem Kundensystem laufen oder sich per SSH mit einem Zielsystem verbinden.")
 
     ui.section("Zielsystem", "1")
 
-    host = ask_text("SSH-Host/IP")
-    ssh_user = ask_text("SSH-Benutzer", "root")
-    ssh_port = ask_int("SSH-Port", 22)
-    ssh_key_path = _normalize_empty(ask_text("Pfad zur SSH-Key-Datei (optional)", "", required=False))
-    ssh_password = ask_secret("SSH-Passwort (optional, leer = Key/Agent)", allow_empty=True)
-    ssh_host_key_mode = ask_choice(
-        "SSH Host-Key-Modus (strict/accept-new/insecure)",
-        choices=["strict", "accept-new", "insecure"],
-        default="accept-new",
-    )
+    local_execution = ask_bool("Installer direkt auf diesem System ausfuehren (keine SSH-Verbindung aufbauen)?", True)
+    execution_mode = "local" if local_execution else "ssh"
+    if local_execution:
+        host = "localhost"
+        ssh_user = getuser()
+        ssh_port = 22
+        ssh_key_path = None
+        ssh_password = ""
+        ssh_host_key_mode = "accept-new"
+        ui.info("Lokaler Modus aktiv: Punkt 1 baut keine SSH-Verbindung auf; alle Kommandos laufen direkt auf diesem System.")
+    else:
+        host = ask_text("SSH-Host/IP")
+        ssh_user = ask_text("SSH-Benutzer", "root")
+        ssh_port = ask_int("SSH-Port", 22)
+        ssh_key_path = _normalize_empty(ask_text("Pfad zur SSH-Key-Datei (optional)", "", required=False))
+        ssh_password = ask_secret("SSH-Passwort (optional, leer = Key/Agent)", allow_empty=True)
+        ssh_host_key_mode = ask_choice(
+            "SSH Host-Key-Modus (strict/accept-new/insecure)",
+            choices=["strict", "accept-new", "insecure"],
+            default="accept-new",
+        )
     use_sudo = ask_bool("Soll sudo verwendet werden?", True)
 
     ui.section("Installationsparameter", "2")
@@ -139,7 +150,7 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         support_ssh_public_key = generated_key.public_key
         support_ssh_private_key_path = str(generated_key.private_key_path)
         ui.success(f"SSH-Key wurde erzeugt: {generated_key.private_key_path}")
-        ui.warning("Kopiere den folgenden PRIVATE KEY in Termius/Termux. Er wird danach nicht in der Konfiguration gespeichert.")
+        ui.warning("Kopiere den folgenden PRIVATE KEY im PEM-Format in Termius/Termux. Er wird danach nicht in der Konfiguration gespeichert.")
         print()
         print(generated_key.private_key.rstrip())
         print()
@@ -152,6 +163,7 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
     return InstallerConfig(
         host=host,
         ssh_user=ssh_user,
+        execution_mode=execution_mode,
         ssh_port=ssh_port,
         ssh_key_path=ssh_key_path,
         ssh_password=ssh_password,
