@@ -348,21 +348,46 @@ WantedBy=multi-user.target
         conf_path=conf_path,
     )
 
-    init_db_command = _as_user(
-        "if ! psql -d {db_name} -Atc \"SELECT to_regclass('public.ir_module_module')\" | grep -qx ir_module_module; then "
-        "cd {src_dir} && {python_bin} {odoo_bin} -c {conf_path} -d {db_name} -i base --without-demo=all --stop-after-init || "
-        "(echo 'Odoo-Datenbankinitialisierung fehlgeschlagen. Letzte Logzeilen:' >&2; tail -n 80 {log_file} >&2 || true; exit 1); "
-        "fi".format(
-            db_name=shlex.quote(config.db_name),
-            src_dir=shlex.quote(src_dir),
-            python_bin=shlex.quote(f"{venv_dir}/bin/python3"),
-            odoo_bin=shlex.quote(f"{src_dir}/odoo-bin"),
-            conf_path=shlex.quote(conf_path),
-            log_file=shlex.quote(f"{log_dir}/odoo.log"),
-        ),
-        config.odoo_system_user,
-        config.use_sudo,
+    init_db_script = """set -u
+if psql -d {db_name} -Atc \"SELECT to_regclass('public.ir_module_module')\" | grep -qx ir_module_module; then
+    echo 'Odoo-Datenbank ist bereits initialisiert.'
+else
+    echo 'Odoo-Datenbank wird initialisiert (-i base).'
+    if [ ! -x {python_bin} ]; then
+        echo 'Python der Odoo-venv nicht gefunden oder nicht ausfuehrbar: {python_bin}' >&2
+        exit 1
+    fi
+    if [ ! -f {odoo_bin} ]; then
+        echo 'odoo-bin nicht gefunden: {odoo_bin}' >&2
+        exit 1
+    fi
+    if [ ! -f {base_manifest} ]; then
+        echo 'Odoo-Basismodul nicht gefunden: {base_manifest}' >&2
+        echo 'Bitte pruefe Odoo-Quellcode und addons_path.' >&2
+        exit 1
+    fi
+    cd {src_dir}
+    {python_bin} {odoo_bin} -c {conf_path} -d {db_name} -i base --without-demo=all --stop-after-init
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        echo 'Odoo-Datenbankinitialisierung fehlgeschlagen. Letzte Logzeilen:' >&2
+        if [ -f {log_file} ]; then
+            tail -n 120 {log_file} >&2
+        else
+            echo 'Logdatei noch nicht vorhanden: {log_file}' >&2
+        fi
+        exit $rc
+    fi
+fi""".format(
+        db_name=shlex.quote(config.db_name),
+        src_dir=shlex.quote(src_dir),
+        python_bin=shlex.quote(f"{venv_dir}/bin/python3"),
+        odoo_bin=shlex.quote(f"{src_dir}/odoo-bin"),
+        conf_path=shlex.quote(conf_path),
+        log_file=shlex.quote(f"{log_dir}/odoo.log"),
+        base_manifest=shlex.quote(f"{src_dir}/odoo/addons/base/__manifest__.py"),
     )
+    init_db_command = _as_user(init_db_script, config.odoo_system_user, config.use_sudo)
 
     commands_service = [
         _write_file_command(conf_path, config_file.rstrip(), config.use_sudo),
