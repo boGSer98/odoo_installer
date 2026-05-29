@@ -374,6 +374,7 @@ WantedBy=multi-user.target
 
     if config.enable_support_ssh:
         support_user = shlex.quote(config.support_ssh_user)
+        support_full_name = shlex.quote(config.support_ssh_full_name)
         support_home = f"/home/{config.support_ssh_user}"
         authorized_keys = f"{support_home}/.ssh/authorized_keys"
         sudoers_path = f"/etc/sudoers.d/90-{config.support_ssh_user}"
@@ -383,9 +384,10 @@ WantedBy=multi-user.target
             _sudo("systemctl enable --now ssh", config.use_sudo),
             _sudo(
                 f"id -u {support_user} >/dev/null 2>&1 || "
-                f"useradd --create-home --shell /bin/bash {support_user}",
+                f"useradd --create-home --shell /bin/bash --comment {support_full_name} {support_user}",
                 config.use_sudo,
             ),
+            _sudo(f"usermod --comment {support_full_name} {support_user}", config.use_sudo),
             _sudo(f"passwd -l {support_user} || true", config.use_sudo),
             _sudo(f"usermod -aG sudo {support_user}", config.use_sudo),
             _sudo(

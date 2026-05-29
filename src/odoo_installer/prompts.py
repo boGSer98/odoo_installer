@@ -4,6 +4,7 @@ from getpass import getpass
 import secrets
 
 from .models import InstallerConfig
+from .support_ssh import generate_support_key
 from .ui import ui
 
 
@@ -127,11 +128,23 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
     ui.section("AHD Support-Zugriff", "5")
     ui.info("Optional wird ein SSH-Key-basierter Support-Benutzer fuer Termius/Termux/Terminal-Zugriff angelegt.")
     enable_support_ssh = ask_bool("Support-SSH-Zugang fuer AHD einrichten?", False)
-    support_ssh_user = "ahd-support"
+    support_ssh_user = "itservice-ahd-support"
+    support_ssh_full_name = "IT-Service AHD"
     support_ssh_public_key = ""
+    support_ssh_private_key_path = ""
     if enable_support_ssh:
         support_ssh_user = ask_text("Support-SSH-Benutzer", support_ssh_user)
-        support_ssh_public_key = ask_text("SSH Public Key fuer authorized_keys")
+        support_ssh_full_name = ask_text("Vollstaendiger Name", support_ssh_full_name)
+        generated_key = generate_support_key(host, support_ssh_user)
+        support_ssh_public_key = generated_key.public_key
+        support_ssh_private_key_path = str(generated_key.private_key_path)
+        ui.success(f"SSH-Key wurde erzeugt: {generated_key.private_key_path}")
+        ui.warning("Kopiere den folgenden PRIVATE KEY in Termius/Termux. Er wird danach nicht in der Konfiguration gespeichert.")
+        print()
+        print(generated_key.private_key.rstrip())
+        print()
+        ui.info("Public Key fuer authorized_keys:")
+        print(generated_key.public_key)
 
     ui.section("Ausfuehrung", "6")
     dry_run = ask_bool("Dry-Run (nur anzeigen, nichts aendern)?", default_dry_run)
@@ -159,7 +172,9 @@ def collect_config(default_dry_run: bool = False) -> InstallerConfig:
         enable_ufw=enable_ufw,
         enable_support_ssh=enable_support_ssh,
         support_ssh_user=support_ssh_user,
+        support_ssh_full_name=support_ssh_full_name,
         support_ssh_public_key=support_ssh_public_key,
+        support_ssh_private_key_path=support_ssh_private_key_path,
         http_port=http_port,
         longpolling_port=longpolling_port,
         dry_run=dry_run,
