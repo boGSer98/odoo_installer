@@ -35,6 +35,20 @@ def _run_or_fail(executor: SSHExecutor, command: str, context: str) -> None:
         raise RuntimeError(f"{context} fehlgeschlagen (Exit-Code {result.returncode}).\nKommando: {command}")
 
 
+def _require_restic_backup_config(config: InstallerConfig) -> None:
+    if not config.backup_enabled:
+        raise ValueError("Restic-Operationen benoetigen backup_enabled=true in der Konfiguration.")
+    if not config.backup_repository_url.strip():
+        raise ValueError("Restic-Operationen benoetigen backup_repository_url in der Konfiguration.")
+
+
+def _restic_env_command(config: InstallerConfig, restic_command: str) -> str:
+    _require_restic_backup_config(config)
+    env_file = "/etc/odoo-backup/env"
+    command = f"set -a && . {shlex.quote(env_file)} && set +a && {restic_command}"
+    return _sudo(f"bash -lc {shlex.quote(command)}", config.use_sudo)
+
+
 def _odoo_runtime_paths(config: InstallerConfig) -> tuple[str, str, str, str]:
     install_dir = config.install_dir.rstrip("/")
     src_dir = f"{install_dir}/src/odoo"
@@ -186,3 +200,23 @@ def run_restore(
         )
 
     print("Restore erfolgreich abgeschlossen.")
+
+
+def run_restic_snapshots(executor: SSHExecutor, config: InstallerConfig) -> None:
+    print("Lese Restic-Snapshots.")
+    _run_or_fail(
+        executor,
+        _restic_env_command(config, "restic snapshots"),
+        "Restic-Snapshotliste",
+    )
+
+
+def run_restic_check(executor: SSHExecutor, config: InstallerConfig, read_data_subset: str = "5%") -> None:
+    if not read_data_subset.strip():
+        raise ValueError("read_data_subset darf nicht leer sein.")
+    print(f"Pruefe Restic-Repository mit --read-data-subset={read_data_subset}.")
+    _run_or_fail(
+        executor,
+        _restic_env_command(config, f"restic check --read-data-subset={shlex.quote(read_data_subset)}"),
+        "Restic-Repository-Pruefung",
+    )

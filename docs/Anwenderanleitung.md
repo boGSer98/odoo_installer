@@ -160,6 +160,15 @@ sudo /usr/local/sbin/odoo-backup
 sudo tail -n 100 /var/log/odoo-backup.log
 ```
 
+Snapshots und Repository-Check koennen auch ueber den Installer ausgefuehrt werden:
+
+```bash
+odoo-installer --config run-config.json --local --restic-snapshots --yes
+odoo-installer --config run-config.json --local --restic-check --restic-read-data-subset 5% --yes
+```
+
+Ein kompletter Testlauf ist in `docs/Testlauf_Installation_Addons_Backup.md` beschrieben.
+
 ## AHD Support-Zugriff
 
 Im interaktiven Schritt **6 AHD Support-Zugriff** kann ein dedizierter Support-Benutzer fuer IT-Service AHD eingerichtet werden.

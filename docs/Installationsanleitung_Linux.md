@@ -114,6 +114,15 @@ sudo /usr/local/sbin/odoo-backup
 sudo tail -n 100 /var/log/odoo-backup.log
 ```
 
+Snapshots und Repository-Check ueber den Installer:
+
+```bash
+odoo-installer --config run-config.json --local --restic-snapshots --yes
+odoo-installer --config run-config.json --local --restic-check --restic-read-data-subset 5% --yes
+```
+
+Ein kompletter Ablauf fuer Installation, nachtraegliche Repository-Einbindung und Backup-Test steht in `docs/Testlauf_Installation_Addons_Backup.md`.
+
 ### AHD Support-Zugriff in Schritt 6
 
 Wenn du den Punkt **6 AHD Support-Zugriff** im interaktiven Installer aktivierst, erzeugt der Installer automatisch einen eigenen lokalen SSH-Key fuer den Support-Zugang.
@@ -189,6 +198,13 @@ Restic-Backups werden durch den Cronjob `/etc/cron.d/odoo-backup` ausgefuehrt. E
 
 ```bash
 sudo /usr/local/sbin/odoo-backup
+```
+
+Snapshots und Repository-Check:
+
+```bash
+odoo-installer --config run-config.json --local --restic-snapshots --yes
+odoo-installer --config run-config.json --local --restic-check --restic-read-data-subset 5% --yes
 ```
 
 ## 8. Typische Fehler und Loesungen

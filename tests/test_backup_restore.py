@@ -1,6 +1,6 @@
 import unittest
 
-from odoo_installer.backup_restore import run_backup, run_restore
+from odoo_installer.backup_restore import run_backup, run_restore, run_restic_check, run_restic_snapshots
 from odoo_installer.models import InstallerConfig
 from odoo_installer.ssh import CommandResult
 
@@ -28,6 +28,9 @@ def _config() -> InstallerConfig:
         db_user="odoo",
         db_password="secret-db",
         admin_password="secret-admin",
+        backup_enabled=True,
+        backup_repository_url="sftp:backup@example.com:/backups/customer-odoo",
+        backup_password_file="/etc/odoo-backup/restic-password",
     )
 
 
@@ -85,6 +88,32 @@ class BackupRestoreTests(unittest.TestCase):
         self.assertIn("-f --neutralize", joined)
         self.assertIn("systemctl restart odoo", joined)
         self.assertIn("systemctl --no-pager --full status odoo", joined)
+
+    def test_restic_snapshots_uses_env_file_without_printing_secrets(self) -> None:
+        executor = _FakeExecutor()
+
+        run_restic_snapshots(executor=executor, config=_config())
+
+        joined = "\n".join(executor.commands)
+        self.assertIn("set -a && . /etc/odoo-backup/env && set +a && restic snapshots", joined)
+        self.assertNotIn("secret-db", joined)
+        self.assertNotIn("secret-admin", joined)
+
+    def test_restic_check_reads_data_subset_by_default(self) -> None:
+        executor = _FakeExecutor()
+
+        run_restic_check(executor=executor, config=_config())
+
+        joined = "\n".join(executor.commands)
+        self.assertIn("set -a && . /etc/odoo-backup/env && set +a && restic check --read-data-subset=5%", joined)
+
+    def test_restic_operations_require_backup_enabled(self) -> None:
+        executor = _FakeExecutor()
+        config = _config()
+        config.backup_enabled = False
+
+        with self.assertRaisesRegex(ValueError, "backup_enabled"):
+            run_restic_snapshots(executor=executor, config=config)
 
 
 if __name__ == "__main__":
