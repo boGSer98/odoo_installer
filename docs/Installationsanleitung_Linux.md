@@ -85,6 +85,8 @@ odoo-installer --config run-config.json --ask-ssh-password --ssh-host-key-mode a
 
 Wenn der AHD Support-Zugriff aktiviert ist, zeigt der Dry-Run auch die geplanten Schritte fuer den Benutzer `itservice-ahd-support`, `authorized_keys`, Passwortsperre und sudoers-Konfiguration an.
 
+Der Dry-Run zeigt ausserdem die automatische Odoo-Datenbankinitialisierung. Der Installer prueft, ob die Tabelle `ir_module_module` bereits existiert. Falls nicht, wird die Datenbank vor dem Service-Start mit `-i base --without-demo=all --stop-after-init` initialisiert.
+
 ## 6. Produktiver Installationslauf
 
 ```bash
@@ -134,3 +136,18 @@ ssh-keygen -R <hostname-oder-ip>
 
 - entweder als `root` verbinden
 - oder auf Zielsystem passenden `sudo`-Zugang konfigurieren
+
+`500 Internal Server Error` auf `localhost:8069`
+
+- Odoo-Log pruefen:
+
+```bash
+sudo tail -n 100 /opt/odoo/logs/odoo.log
+```
+
+- Wenn die Datenbank noch nicht initialisiert wurde, Installer aktualisieren und lokal erneut starten:
+
+```bash
+git pull
+odoo-installer --config run-config.json --local --yes
+```
